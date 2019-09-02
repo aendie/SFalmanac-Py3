@@ -27,7 +27,7 @@ The results have been crosschecked with USNO data to some extent.
 &nbsp;&nbsp;&nbsp;&nbsp;Typesetting is done by TeX/LaTeX so you first need to install:
 
 * Python v3.4 or higher (3.7 is recommended)
-* Skyfield and PyEphem (only for planet magnitudes)
+* Skyfield (and PyEphem - only for planet magnitudes)
 * TeX/LaTeX&nbsp;&nbsp;or&nbsp;&nbsp;MiKTeX
   
 &nbsp;&nbsp;&nbsp;&nbsp;When MiKTeX first runs it will require installation of additional packages.  
