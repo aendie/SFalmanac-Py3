@@ -11,7 +11,7 @@ https://github.com/aendie/Py3almanac
 
 An aim of this development was to maintain:
 
-* **identical PDF output formatting with a similar control program**
+* **identical PDF output formatting with a similar control program**  
 	 It is then possible to display both generated tables (from PyEphem and Skyfield)
 	 and compare what has changed by flipping between the two tabs in the PDF reader.
 	 Anything that has changed flashes, thereby drawing your attention to it.
