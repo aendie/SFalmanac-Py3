@@ -24,7 +24,7 @@ The results have been crosschecked with USNO data to some extent.
 ## Requirements
 
 &nbsp;&nbsp;&nbsp;&nbsp;Most of the computation is done by the free Skyfield library.  
-&nbsp;&nbsp;&nbsp;&nbsp;Typesetting is done by TeX/LaTeX so you first need to install:
+&nbsp;&nbsp;&nbsp;&nbsp;Typesetting is done by LaTeX or MiKTeX so you first need to install:
 
 * Python v3.4 or higher (3.7 is recommended)
 * Skyfield (and PyEphem - only for planet magnitudes)
