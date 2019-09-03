@@ -47,7 +47,7 @@ The results have been crosschecked with USNO data to some extent.
 &nbsp;&nbsp;&nbsp;&nbsp;**python -m pip install --upgrade pyephem**
 
 &nbsp;&nbsp;&nbsp;&nbsp;Put the SFalmanac files in a new folder, go there and start with:  
-&nbsp;&nbsp;&nbsp;&nbsp;**py -3 SFalmanac.py**
+&nbsp;&nbsp;&nbsp;&nbsp;**py -3 sfalmanac.py**
 
 
 ### INSTALLATION GUIDELINES on Linux:
@@ -60,9 +60,9 @@ The results have been crosschecked with USNO data to some extent.
 &nbsp;&nbsp;&nbsp;&nbsp;**pip install skyfield**  
 
 &nbsp;&nbsp;&nbsp;&nbsp;Put the SFalmanac files in any directory and start with:  
-&nbsp;&nbsp;&nbsp;&nbsp;**python SFalmanac**  
+&nbsp;&nbsp;&nbsp;&nbsp;**python sfalmanac**  
 &nbsp;&nbsp;&nbsp;&nbsp;or  
-&nbsp;&nbsp;&nbsp;&nbsp;**./SFalmanac**
+&nbsp;&nbsp;&nbsp;&nbsp;**./sfalmanac**
 
 
 ### INSTALLATION GUIDELINES on MAC:
@@ -82,6 +82,6 @@ The results have been crosschecked with USNO data to some extent.
 &nbsp;&nbsp;&nbsp;&nbsp;Install TeX/LaTeX from http://www.tug.org/mactex/
 
 &nbsp;&nbsp;&nbsp;&nbsp;Now you are almost ready. Put the SFalmanac files in any directory and start with:  
-&nbsp;&nbsp;&nbsp;&nbsp;**python SFalmanac**  
+&nbsp;&nbsp;&nbsp;&nbsp;**python sfalmanac**  
 &nbsp;&nbsp;&nbsp;&nbsp;or  
-&nbsp;&nbsp;&nbsp;&nbsp;**./SFalmanac**
+&nbsp;&nbsp;&nbsp;&nbsp;**./sfalmanac**
