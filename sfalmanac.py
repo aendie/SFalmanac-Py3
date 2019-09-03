@@ -150,7 +150,7 @@ if s in set(['1', '2', '3', '4']):
     elif s == '3':
 ##        config.init()		# initialize log file
         start = time.time()
-        config.stopwatch = 0.0
+        config.stopwatch = 0.0      # 00000
         print("\nCreating nautical almanac tables - from %s" %(sdmy))
         filename = "almanac%s%s.tex" %(ff,symd+DecFmt)
         outfile = open(filename, mode="w", encoding="utf8")
@@ -159,11 +159,11 @@ if s in set(['1', '2', '3', '4']):
         stop = time.time()
         msg = "execution time = %0.2f seconds" %(stop-start)
         print(msg)
-        msg = "stopwatch      = %0.2f seconds" %(config.stopwatch)
-        print(msg)
-        print
 ##        config.writeLOG('\n\n' + msg)
 ##        config.closeLOG()
+##        msg = "stopwatch      = %0.2f seconds" %(config.stopwatch)
+##        print(msg)                  # 00000
+        print
         command = 'pdflatex %s' %filename
         os.system(command)
         print("finished")
