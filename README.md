@@ -2,12 +2,12 @@
 
 SFalmanac-Py3 is a Python 3.7 script that creates the daily pages of the Nautical Almanac. These are tables that are needed for celestial navigation with a sextant. Although you are strongly advised to purchase the official Nautical Almanac, this program will reproduce the tables with no warranty or guarantee of accuracy.
 
-As opposed to the older PyEphem astronomy library, this uses the newer Skyfield astronomy package: https://rhodesmill.org/skyfield/
+As opposed to the older PyEphem astronomy library, this uses the newer Skyfield astronomy package: https://rhodesmill.org/skyfield/ (however PyEphem is still required for planet magnitudes).
 
 NOTE: two scripts are included (both can be run): 'sfalmanac.py' and 'increments.py'  
 NOTE: a Python 2.7 script with identical functionality can be found at:  https://github.com/aendie/SFalmanac-Py2  
 NOTE: a [PyEphem](https://rhodesmill.org/pyephem/) version of SFalmanac is available here:
-https://github.com/aendie/Py3almanac
+https://github.com/aendie/Pyalmanac-Py3
 
 An aim of this development was to maintain:
 
