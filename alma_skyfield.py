@@ -522,7 +522,7 @@ Diphda,3419
 Achernar,7588
 Hamal,9884
 Polaris,11767
-Akamar,13847
+Acamar,13847
 Menkar,14135
 Mirfak,15863
 Aldebaran,21421
