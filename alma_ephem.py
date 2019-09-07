@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 #   Copyright (C) 2019  Andrew Bauer
@@ -31,28 +31,28 @@ degree_sign= u'\N{DEGREE SIGN}'
 
 def magnitudes(date):
     # returns  magitude for the navigational planets.
-    # (Skyfield 1.10 does not provide this)
+    # (Skyfield 1.11 does not provide this)
     
     obs = ephem.Observer()
     
     #Venus
     obs.date = date
     ephem_venus.compute(date)
-    mag_venus = "%0.1f" %(ephem_venus.mag)
+    mag_venus = u"%0.1f" %(ephem_venus.mag)
     
     #Mars
     obs.date = date
     ephem_mars.compute(date)
-    mag_mars = "%0.1f" %(ephem_mars.mag)
+    mag_mars = u"%0.1f" %(ephem_mars.mag)
     
     #Jupiter
     obs.date = date
     ephem_jupiter.compute(date)
-    mag_jupiter = "%0.1f" %(ephem_jupiter.mag)
+    mag_jupiter = u"%0.1f" %(ephem_jupiter.mag)
     
     #Saturn
     obs.date = date
     ephem_saturn.compute(date)
-    mag_saturn = "%0.1f" %(ephem_saturn.mag)
+    mag_saturn = u"%0.1f" %(ephem_saturn.mag)
     
     return mag_venus,mag_mars,mag_jupiter,mag_saturn
