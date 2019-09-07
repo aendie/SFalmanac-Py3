@@ -20,6 +20,7 @@
 import config
 import datetime		# required for .timedelta()
 import sys			# required for .stdout.write()
+from alma_ephem import *
 from alma_skyfield import *
 
 UpperLists = [[], [], []]    # moon GHA per hour for 3 days
