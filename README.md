@@ -2,7 +2,7 @@
 
 SFalmanac-Py3 is a Python 3.7 script that creates the daily pages of the Nautical Almanac. These are tables that are needed for celestial navigation with a sextant. Although you are strongly advised to purchase the official Nautical Almanac, this program will reproduce the tables with no warranty or guarantee of accuracy.
 
-As opposed to the older PyEphem astronomy library, this uses the newer Skyfield astronomy package: https://rhodesmill.org/skyfield/ (however PyEphem is still required for planet magnitudes).
+SFalmanac-Py3 was developed with the intention of having identical output format as Pyalmanac-Py3. As opposed to the older PyEphem astronomy library, the intention was for it to be based entirely on the newer Skyfield astronomical library: https://rhodesmill.org/skyfield/, however PyEphem is still required to calculate the planet magnitudes. It uses the star database in Skyfield, which is based on data from the Hipparcos Catalogue. The principal disadvantage is that calculating twilight (actual, civil and nautical sunrise/sunset) and moonrise/moonset is extremely slow. As a consequence of this a new hybrid version which is four times faster will soon be published. (The hybrid version uses PyEphem to calculate twilight and moonrise/moonset.)
 
 NOTE: two scripts are included (both can be run): 'sfalmanac.py' and 'increments.py'  
 NOTE: a Python 2.7 script with identical functionality can be found at:  https://github.com/aendie/SFalmanac-Py2  
