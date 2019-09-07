@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 #   Copyright (C) 2019  Andrew Bauer
-#   Copyright (C) 2014  Enno Rodegerdts
 
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -17,10 +16,9 @@
 #   You should have received a copy of the GNU General Public License along
 #   with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# This contains all functions that calculate values for the nautical almanac
+# This contains the majority of functions that calculate values for the nautical almanac
 
 import config
-import ephem        # required only for planet magnitudes
 import math
 import time         # 00000
 import datetime
@@ -43,10 +41,6 @@ venus   = eph['venus']
 mars    = eph['mars']
 jupiter = eph['jupiter barycenter']
 saturn  = eph['saturn barycenter']
-ephem_venus   = ephem.Venus()
-ephem_mars    = ephem.Mars()
-ephem_jupiter = ephem.Jupiter()
-ephem_saturn  = ephem.Saturn()
 degree_sign= u'\N{DEGREE SIGN}'
 
 # load the Hipparcos catalog as a 118,218 row Pandas dataframe.
@@ -190,6 +184,15 @@ def moonVD(d0,d):
     return moonVm, moonDm
 
 
+def norm(delta):
+    # normalize the angle between 0° and 360°
+    # (usually delta is roughly 15 degrees)
+    while delta < 0:
+        delta += 360.0
+    while delta >= 360.0:
+        delta -= 360.0
+    return delta
+
 def vdm_Venus(d):
     # compute v (GHA correction), d (Declination correction), m (magnitude of planet)
     t0 = ts.utc(d.year, d.month, d.day, 0, 0, 0)
@@ -204,7 +207,7 @@ def vdm_Venus(d):
 
     sha0 = (t0.gast - ra0.hours) * 15
     sha1 = (t1.gast - ra1.hours) * 15
-    sha  = sha1 - sha0 - 15
+    sha  = norm(sha1 - sha0) - 15
     RAcorrm = u'%0.1f' %(sha * 60)	# convert to minutes of arc
     Dcorr = dec1.degrees - dec0.degrees
     Dcorrm = u'%0.1f' %(Dcorr * 60)	# convert to minutes of arc
@@ -224,7 +227,7 @@ def vdm_Mars(d):
 
     sha0 = (t0.gast - ra0.hours) * 15
     sha1 = (t1.gast - ra1.hours) * 15
-    sha  = sha1 - sha0 - 15
+    sha  = norm(sha1 - sha0) - 15
     RAcorrm = u'%0.1f' %(sha * 60)	# convert to minutes of arc
     Dcorr = dec1.degrees - dec0.degrees
     Dcorrm = u'%0.1f' %(Dcorr * 60)	# convert to minutes of arc
@@ -244,7 +247,7 @@ def vdm_Jupiter(d):
 
     sha0 = (t0.gast - ra0.hours) * 15
     sha1 = (t1.gast - ra1.hours) * 15
-    sha  = sha1 - sha0 - 15
+    sha  = norm(sha1 - sha0) - 15
     RAcorrm = u'%0.1f' %(sha * 60)	# convert to minutes of arc
     Dcorr = dec1.degrees - dec0.degrees
     Dcorrm = u'%0.1f' %(Dcorr * 60)	# convert to minutes of arc
@@ -264,7 +267,7 @@ def vdm_Saturn(d):
 
     sha0 = (t0.gast - ra0.hours) * 15
     sha1 = (t1.gast - ra1.hours) * 15
-    sha  = sha1 - sha0 - 15
+    sha  = norm(sha1 - sha0) - 15
     RAcorrm = u'%0.1f' %(sha * 60)	# convert to minutes of arc
     Dcorr = dec1.degrees - dec0.degrees
     Dcorrm = u'%0.1f' %(Dcorr * 60)	# convert to minutes of arc
@@ -575,35 +578,6 @@ Fomalhaut,113368
 Scheat,113881
 Markab,113963
 """
-
-
-def magnitudes(date):
-    # returns  magitude for the navigational planets.
-    # (Skyfield 1.10 does not provide this)
-    
-    obs = ephem.Observer()
-    
-    #Venus
-    obs.date = date
-    ephem_venus.compute(date)
-    mag_venus = u'%0.1f' %(ephem_venus.mag)
-    
-    #Mars
-    obs.date = date
-    ephem_mars.compute(date)
-    mag_mars = u'%0.1f' %(ephem_mars.mag)
-    
-    #Jupiter
-    obs.date = date
-    ephem_jupiter.compute(date)
-    mag_jupiter = u'%0.1f' %(ephem_jupiter.mag)
-    
-    #Saturn
-    obs.date = date
-    ephem_saturn.compute(date)
-    mag_saturn = u'%0.1f' %(ephem_saturn.mag)
-    
-    return mag_venus,mag_mars,mag_jupiter,mag_saturn
 
 
 def twilight(d,lat,hemisph):
