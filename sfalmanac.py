@@ -24,13 +24,13 @@ import sys
 import time
 import datetime
 import config
-import alma_skyfield
+from alma_skyfield import init
 
 ##Main##
 if sys.version_info[0] < 3:
     raise Exception("Must be using Python 3")
     
-ts = alma_skyfield.init()
+ts = init()     # in alma_skyfield
 d = datetime.datetime.utcnow().date()
 first_day = datetime.date(d.year, d.month, d.day)
 
