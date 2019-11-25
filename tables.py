@@ -767,10 +767,10 @@ def almanac(first_day, pagenum):
 
     \begin{document}
 
+    % for the title page only...
+    \newgeometry{ top=21mm, bottom=15mm, left=12mm, right=8mm}
     \begin{titlepage}
 """
-    if config.tbls == "m":
-        alm = alm + r'''\vspace*{0.7cm}'''
 
     alm = alm + r"""
     \begin{center}
@@ -778,9 +778,9 @@ def almanac(first_day, pagenum):
     \textsc{\Large Generated using Skyfield}\\
     \large http://rhodesmill.org/skyfield/\\[0.7cm]
 
-    %\includegraphics[width=0.45\textwidth]{./Sky-large}\\[1cm]
-    \includegraphics[width=0.8\textwidth]{./Bowditch-stars-0-180}\\[0.3cm]
-    \includegraphics[width=0.8\textwidth]{./Bowditch-stars-180-360}\\[1.3cm]
+    % TRIM values: left bottom right top
+    \includegraphics[clip, trim=12mm 20cm 12mm 21mm, width=0.92\textwidth]{./A4chart0-180_P.pdf}\\[0.3cm]
+    \includegraphics[clip, trim=12mm 20cm 12mm 21mm, width=0.92\textwidth]{./A4chart180-360_P.pdf}\\[0.8cm]
 
     \textsc{\huge The Nautical Almanac}\\[0.7cm]
 """
@@ -815,9 +815,7 @@ def almanac(first_day, pagenum):
 """
 
     alm = alm + r"""\end{center}
-     
-    \vfill
-     
+
     {\large \today}
     \HRule \\[0.2cm]
     \end{center}
@@ -832,6 +830,7 @@ def almanac(first_day, pagenum):
     \end{description}
     
     \end{titlepage}
+    \restoregeometry    % so it does not affect the rest of the pages
 """
     alm = alm + pages(first_day,pagenum)
     alm = alm + u'\end{document}'

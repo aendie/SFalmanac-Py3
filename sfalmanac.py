@@ -43,7 +43,6 @@ smth = "%02d" % d.month
 syr  = "%s" % d.year
 symd = syr + smth + sday
 sdmy = sday + "." + smth + "." + syr
-#print('Today is %s' %symd)
 
 s = input("""What do you want to create?:\n
     1   Full nautical almanac   (for a year)
@@ -105,14 +104,15 @@ if s in set(['1', '2', '3', '4']):
     else:
         DecFmt = '[old]'
 
-
     if s == '1':
         print("Take a break - this computer needs some time for cosmic meditation.")
-        config.init()
+##        config.init()		# initialize log file
         for yearint in range(int(yearfr),int(yearto)+1):
             start = time.time()
             year = "%4d" %yearint
-            print("\nCreating the nautical almanac for the year %s" %year)
+            msg = "\nCreating the nautical almanac for the year %s" %year
+            print(msg)
+##            config.writeLOG(msg)
             first_day = datetime.date(yearint, 1, 1)
             filename = "almanac%s%s.tex" %(ff,year+DecFmt)
             outfile = open(filename, mode="w", encoding="utf8")
@@ -122,14 +122,14 @@ if s in set(['1', '2', '3', '4']):
             msg = "execution time = %0.2f seconds" %(stop-start)
             print(msg)
             print
-            config.writeLOG("\n\n" + msg)
+##            config.writeLOG("\n\n" + msg + "\n")
             command = 'pdflatex %s' %filename
             os.system(command)
             print("finished creating nautical almanac for %s" %year)
             os.remove(filename)
             os.remove("almanac%s%s.log" %(ff,year+DecFmt))
             os.remove("almanac%s%s.aux" %(ff,year+DecFmt))
-        config.closeLOG()
+##        config.closeLOG()
 
     elif s == '2':
         for yearint in range(int(yearfr),int(yearto)+1):
