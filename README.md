@@ -86,7 +86,7 @@ This includes very minor changes and an improved title page for the full almanac
 
 &nbsp;&nbsp;&nbsp;&nbsp;**sudo easy_install pip**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip install pyephem**  
-&nbsp;&nbsp;&nbsp;&nbsp;**pip install skyfield**
+&nbsp;&nbsp;&nbsp;&nbsp;**pip install skyfield**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip install pandas**  
 
 &nbsp;&nbsp;&nbsp;&nbsp;If this command fails, your Mac asks you if you would like to install the header files.  
