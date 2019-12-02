@@ -77,10 +77,9 @@ def suntab(date):
             tab = tab + r"""\multicolumn{1}{c}{}\\[-0.5ex]"""
         n += 1
         date += datetime.timedelta(days=1)
-    tab = tab+r"""\end{tabular*}"""
+    tab = tab + r"""\end{tabular*}"""
     return tab
-    
-    
+
 def suntabm(date):
     # generates LaTeX table for sun only (modern)
     tab = r'''\noindent
@@ -210,11 +209,10 @@ def declCompare(prev_deg, curr_deg, next_deg, hr):
         prDEG= True			# print degrees is N/S to be printed
     return prNS, prDEG
 
-
 ##NEW##
 def NSdecl(deg, hr, printNS, printDEG, modernFMT):
     # reformat degrees latitude to Ndd°mm.m or Sdd°mm.m
-    if deg[0:1] == u'-':
+    if deg[0:1] == '-':
         hemisph = u'S'
         deg = deg[1:]
     else:
@@ -235,7 +233,6 @@ def NSdecl(deg, hr, printNS, printDEG, modernFMT):
             sdeg = deg
     #print("sdeg: ", sdeg)
     return sdeg
-
 
 def page(date):
     # creates a page(15 days) of the Sun almanac
@@ -272,17 +269,17 @@ def page(date):
     \newpage
 """
     return page
-    
-    
-def pages(first_day,p):
+
+
+def pages(first_day, p):
     # make 'p' pages beginning with first_day
     out = ''
     for i in range(p):
         out = out + page(first_day)
         first_day += datetime.timedelta(days=15)
     return out
-    
-    
+
+
 def almanac(first_day, pagenum):
     # make almanac from date till date
     year = first_day.year
@@ -363,9 +360,9 @@ def almanac(first_day, pagenum):
 """
 
     alm = alm + r"""\end{center}
-     
+
     \vfill
-     
+
     {\large \today}
     \HRule \\[0.6cm]
     \end{center}
@@ -383,7 +380,7 @@ def almanac(first_day, pagenum):
 """
     if config.tbls == "m":
         alm = alm + r"""\vspace*{3cm}
-"""	
+"""
     else:
         alm = alm + r"""\vspace*{1.5cm}
 """

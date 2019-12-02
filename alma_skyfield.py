@@ -91,7 +91,6 @@ def sunSD(d):
     dsm = u'%0.1f' %(ds * 60)	# convert to minutes of arc
     return sdsm, dsm
 
-
 def moonSD(d):
     # compute semi-diameter of moon (in minutes)
     t12 = ts.utc(d.year, d.month, d.day, 12, 0, 0)
@@ -101,7 +100,6 @@ def moonSD(d):
     sdm = math.degrees(math.atan(1738.1/dist_km))	# equatorial radius of moon = 1738.1 km
     sdmm = u'%0.1f' %(sdm * 60)	# convert to minutes of arc
     return sdmm
-
 
 def moonGHA(d):
     # compute moon's GHA, DEC and HP per hour of day
@@ -144,7 +142,6 @@ def moonGHA(d):
     # ghaSoD, ghaEoD = GHA at Start/End of Day assuming time is rounded to hh:mm
     return gham, decm, degm, HPm, GHAupper, GHAlower, ghaSoD, ghaEoD
 
-
 def GHAcolong(gha):
     # return the colongitude, e.g. 270° returns 90°
     coGHA = gha + 180
@@ -182,7 +179,6 @@ def moonVD(d0,d):
         V0 = V1		# store current value as next previous value
         D0 = D1		# store current value as next previous value
     return moonVm, moonDm
-
 
 def norm(delta):
     # normalize the angle between 0° and 360°
@@ -454,7 +450,6 @@ def saturnGHA(d):
     #    print(i, ghas[i])
     return ghas, decs, degs
 
-
 def stellar_info(d):
     # returns a list of lists with name, SHA and Dec all navigational stars for epoch of date.
 
@@ -491,7 +486,7 @@ def gha2deg(gst, ra):
         sha = sha + 360
     return sha
 
-def fmtdeg(deg,fixedwidth=1):
+def fmtdeg(deg, fixedwidth=1):
     # formats the angle (deg) to that used in the nautical almanac (ddd°mm.m)
 	# the optional argument specifies the minimum width for the degrees
     theminus = ""
@@ -515,8 +510,7 @@ def fmtdeg(deg,fixedwidth=1):
             gm = u'%s%s°%04.1f' %(theminus,di,mf)
     return gm
 
-
-#List of navigational stars with Hipparcos Catalog Number
+# List of navigational stars with Hipparcos Catalog Number
 db = """
 Alpheratz,677
 Ankaa,2081
@@ -579,8 +573,7 @@ Scheat,113881
 Markab,113963
 """
 
-
-def twilight(d,lat,hemisph):
+def twilight(d, lat, hemisph):
     # Returns for given date and latitude(in full degrees):
     # naut. and civil twilight (before sunrise), sunrise, meridian passage, sunset, civil and nautical twilight (after sunset).
 
@@ -617,10 +610,10 @@ def twilight(d,lat,hemisph):
 
 def rise_set(t, y, lats):
     # get sun/moon rise/set values (if any) rounded to nearest minute
-    rise = u'--:--'
-    sett = u'--:--'
-    ris2 = u'--:--'
-    set2 = u'--:--'
+    rise = '--:--'
+    sett = '--:--'
+    ris2 = '--:--'
+    set2 = '--:--'
     if len(y) == 2:		# this happens most often
         t0 = ts.utc((t[0].utc_datetime() + datetime.timedelta(seconds=30)).replace(second=0, microsecond=0))
         t1 = ts.utc((t[1].utc_datetime() + datetime.timedelta(seconds=30)).replace(second=0, microsecond=0))
@@ -685,7 +678,6 @@ def rise_set_error(y, lats, t0):
         print("%s" %t0.utc_iso())
     return
 
-
 def daylength(topos, degBelowHorizon):
     # Build a function of time that returns the daylength.
     topos_at = (earth + topos).at
@@ -701,7 +693,6 @@ def daylength(topos, degBelowHorizon):
     is_sun_up_at.rough_period = 0.5  # twice a day
     return is_sun_up_at
 
-
 def moonday(topos, degBelowHorizon):
     # Build a function of time that returns the "moonlight daylength".
     topos_at = (earth + topos).at
@@ -716,7 +707,6 @@ def moonday(topos, degBelowHorizon):
 
     is_moon_up_at.rough_period = 0.5  # twice a day
     return is_moon_up_at
-
 
 ##def uppertransit():
     # Build a function of time that returns the moon upper transit time.
@@ -750,13 +740,12 @@ def moonday(topos, degBelowHorizon):
 ##    is_moon_transit_at.rough_period = 0.01  # search increment hint
 ##    return is_moon_transit_at
 
-
-def moonrise_set(d,lat,hemisph):
+def moonrise_set(d, lat, hemisph):
     # returns moonrise and moonset for the given dates and latitude:
     # rise day 1, rise day 2, rise day 3, set day 1, set day 2, set day 3
 
-    out  = [u'--:--',u'--:--',u'--:--',u'--:--',u'--:--',u'--:--']	# first event
-    out2 = [u'--:--',u'--:--',u'--:--',u'--:--',u'--:--',u'--:--']	# second event on same day (rare)
+    out  = ['--:--','--:--','--:--','--:--','--:--','--:--']	# first event
+    out2 = ['--:--','--:--','--:--','--:--','--:--','--:--']	# second event on same day (rare)
     lats = u'%3.1f %s' %(abs(lat), hemisph)
     locn = Topos(lats, u'0.0 E')
     dt = datetime.datetime(d.year, d.month, d.day, 0, 0, 0)
@@ -790,7 +779,6 @@ def moonrise_set(d,lat,hemisph):
     out[2], out[5], out2[2], out2[5] = rise_set(moonrise,y,lats)
 
     return out, out2
-
 
 def find_new_moon(d):
     # find previous & next new moon
@@ -827,7 +815,6 @@ def getGHA(d, hh, mm, ss):
     gha = gha2deg(t1.gast, ra.hours)
     return gha      # GHA as float (degrees)
 
-
 def find_transit(d, ghaList, modeLT):
     # ghaList contains the 'hourly' GHA values on day 'd' for the times:
     #  23:59:30 on d-1; 01:00; 02:00; 03:00 ... 21:00; 22:00; 23:00; 23:59:30
@@ -848,13 +835,13 @@ def find_transit(d, ghaList, modeLT):
     # it detects a transit event. The search begins from 'min_start'.
 
     hr = -1             # an invalid hour value
-    transit_time = u'--:--'  # assume 'no event'
+    transit_time = '--:--'  # assume 'no event'
     prev_gha = 0
-    prev_time = u'--:--'
+    prev_time = '--:--'
     mid_gha = 0
-    mid_time = u'--:--:--'
+    mid_time = '--:--:--'
     gha = 0
-    gha_time = u'--:--'
+    gha_time = '--:--'
     gha = ghaList[0]    # GHA at 23:59:30 on d-1
     gha_top = 360       # min_start defaults to 0
 
@@ -979,7 +966,7 @@ def equation_of_time(d, d1, UpperList, LowerList):
 
 def gha2mpa(gha):
     # format an hour angle as 'Mer. Pass' (hh:mm)
-    hhmm = u'--:--'
+    hhmm = "--:--"
     if gha > 270:
         gha = 360 - gha
     
@@ -991,7 +978,6 @@ def gha2mpa(gha):
         hr += 1
     hhmm = u'%02d:%02d' %(hr,min)
     return hhmm
-
 
 def gha2eqt(gha):
     # format an hour angle as 'Eqn. of Time' (mm:ss)
