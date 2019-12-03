@@ -658,7 +658,6 @@ def rise_set(t, y, lats):
 
     return rise, sett, ris2, set2
 
-
 def rise_set_error(y, lats, t0):
     if config.logfileopen:
         # unexpected rise/set values - write to log file
@@ -875,7 +874,7 @@ def find_transit(d, ghaList, modeLT):
             pass            # events between 23:59 and 23:59:30 never round up to 00:00
         elif(hr == 0 and min == 0):
             mid_gha = getGHA(d, hr, min, 30)
-            mid_time = "%02d:%02d:%02d" %(hr,min,30)
+            mid_time = u"%02d:%02d:%02d" %(hr,min,30)
             if(modeLT):
                 mid_gha = GHAcolong(mid_gha)
             if(mid_gha > 180):
