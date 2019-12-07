@@ -54,7 +54,7 @@ s = input("""What do you want to create?:\n
 if s in set(['1', '2', '3', '4']):
     if int(s) < 3:
         print("Please enter the year you want to create the nautical almanac")
-        years = raw_input("  for as yyyy ... or the FIRST and LAST year as yyyy-yyyy\n")
+        years = input("  for as yyyy ... or the FIRST and LAST year as yyyy-yyyy\n")
         if len(years)== 4:
             yearfr = years
             yearto = years
@@ -110,9 +110,10 @@ if s in set(['1', '2', '3', '4']):
         for yearint in range(int(yearfr),int(yearto)+1):
             start = time.time()
             year = "%4d" %yearint
-            msg = "\nCreating the nautical almanac for the year %s" %year
+            msg = "\nCreating the nautical almanac for the year %s" %(year)
             print(msg)
 ##            config.writeLOG(msg)
+            print
             first_day = datetime.date(yearint, 1, 1)
             filename = "almanac%s%s.tex" %(ff,year+DecFmt)
             outfile = open(filename, mode="w", encoding="utf8")
@@ -134,7 +135,9 @@ if s in set(['1', '2', '3', '4']):
     elif s == '2':
         for yearint in range(int(yearfr),int(yearto)+1):
             year = "%4d" %yearint
-            print("\nCreating the sun tables only for the year %s" %year)
+            msg = "\nCreating the sun tables only for the year %s" %(year)
+            print(msg)
+            print
             first_day = datetime.date(yearint, 1, 1)
             filename = "sunalmanac%s%s.tex" %(ff,year+DecFmt)
             outfile = open(filename, mode="w", encoding="utf8")
@@ -151,7 +154,9 @@ if s in set(['1', '2', '3', '4']):
 ##        config.init()		# initialize log file
         start = time.time()
         config.stopwatch = 0.0      # 00000
-        print("\nCreating nautical almanac tables - from %s" %(sdmy))
+        msg = "\nCreating nautical almanac tables - from %s" %(sdmy)
+        print(msg)
+        print
         filename = "almanac%s%s.tex" %(ff,symd+DecFmt)
         outfile = open(filename, mode="w", encoding="utf8")
         outfile.write(tables.almanac(first_day,2))
@@ -172,7 +177,9 @@ if s in set(['1', '2', '3', '4']):
         os.remove("almanac%s%s.aux" %(ff,symd+DecFmt))
 
     elif s == '4':
-        print("\nCreating the sun tables only - from %s" %(sdmy))
+        msg = "\nCreating the sun tables only - from %s" %(sdmy)
+        print(msg)
+        print
         filename = "sunalmanac%s%s.tex" %(ff,symd+DecFmt)
         outfile = open(filename, mode="w", encoding="utf8")
         outfile.write(suntables.almanac(first_day,2))
