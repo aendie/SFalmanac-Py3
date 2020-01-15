@@ -31,13 +31,17 @@ Declination formatting has been changed to the standard used in Nautical Almanac
 
 This also includes some very minor changes and an improved title page for the full almanac with two star charts that indicate the equatorial navigational stars.
 
+**UPDATE: Jan 2020**
+
+The Nautical Almanac tables now indicate if the sun never sets or never rises; similarly if the moon never sets or never rises. The constant "search_next_rising_sun" in **config.py** determines how the *SunNeverSets* or *SunNeverRises* state is calculated. The code also has cosmetic improvements.
+
 ## Requirements
 
 &nbsp;&nbsp;&nbsp;&nbsp;Most of the computation is done by the free Skyfield library.  
 &nbsp;&nbsp;&nbsp;&nbsp;Typesetting is done by LaTeX or MiKTeX so you first need to install:
 
 * Python v3.4 or higher (the latest version is recommended)
-* Skyfield 1.15 (tested version)
+* Skyfield 1.16 (latest tested version)
 * Pandas (to load the Hipparcos catalog; tested: 0.24.2, 0.25.3)
 * PyEphem 3.7.6 or 3.7.7 (required for planet magnitudes)
 * TeX/LaTeX&nbsp;&nbsp;or&nbsp;&nbsp;MiKTeX

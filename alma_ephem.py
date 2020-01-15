@@ -28,8 +28,11 @@ ephem_jupiter = ephem.Jupiter()
 ephem_saturn  = ephem.Saturn()
 degree_sign= u'\N{DEGREE SIGN}'
 
+#------------------------------------------------
+#   Venus, Mars, Jupiter & Saturn calculations
+#------------------------------------------------
 
-def magnitudes(date):
+def magnitudes(date):       # used in planetstab(m)
     # returns  magitude for the navigational planets.
     # (Skyfield 1.11 does not provide this)
     

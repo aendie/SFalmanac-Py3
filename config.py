@@ -22,7 +22,7 @@
 tbls = ''		# table style (global variable)
 decf = ''		# Declination format (global variable)
 logfileopen = False
-stopwatch = 0.0
+stopwatch = 0.0 # time spent in a section of code
 
 # list of latitudes to include for Sunrise/Sunset/Twilight/Moonrise/Moonset...
 lat = [72,70,68,66,64,62,60,58,56,54,52,50,45,40,35,30,20,10,0,-10,-20,-30,-35,-40,-45,-50,-52,-54,-56,-58,-60]
