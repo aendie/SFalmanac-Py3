@@ -34,7 +34,6 @@ ts = init()     # in alma_skyfield
 d = datetime.datetime.utcnow().date()
 first_day = datetime.date(d.year, d.month, d.day)
 
-#first_day = datetime.date(2019, 4, 22)	# for testing a specific date
 #first_day = datetime.date(2023, 6, 24)	# for testing a specific date
 #d = first_day							# for testing a specific date
 

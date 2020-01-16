@@ -34,7 +34,7 @@ degree_sign= u'\N{DEGREE SIGN}'
 
 def magnitudes(date):       # used in planetstab(m)
     # returns  magitude for the navigational planets.
-    # (Skyfield 1.11 does not provide this)
+    # (Skyfield 1.16 does not provide this)
     
     obs = ephem.Observer()
     

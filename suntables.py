@@ -415,5 +415,5 @@ def almanac(first_day, pagenum):
     \newpage
 """
     alm = alm + pages(first_day,pagenum)
-    alm = alm + u'\end{document}'
+    alm = alm + u"\end{document}"
     return alm

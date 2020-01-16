@@ -102,12 +102,12 @@ def fmtdeg(deg, fixedwidth=1):
         if di == 360:
             di = 0
     if fixedwidth == 2:
-        gm = u'%s%02i°%04.1f' %(theminus,di,mf)
+        gm = u"%s%02i°%04.1f" %(theminus,di,mf)
     else:
         if fixedwidth == 3:
-            gm = u'%s%03i°%04.1f' %(theminus,di,mf)
+            gm = u"%s%03i°%04.1f" %(theminus,di,mf)
         else:
-            gm = u'%s%s°%04.1f' %(theminus,di,mf)
+            gm = u"%s%s°%04.1f" %(theminus,di,mf)
     return gm
 
 def rise_set(t, y, lats):
@@ -220,7 +220,7 @@ def sunSD(d):               # used in sunmoontab(m)
     distance = position.apparent().radec(epoch='date')[2]
     dist_km = distance.km
     sds = math.degrees(math.atan(695500.0 / dist_km))	# radius of sun = 695500 km
-    sdsm = u'%0.1f' %(sds * 60)	# convert to minutes of arc
+    sdsm = u"%0.1f" %(sds * 60)	# convert to minutes of arc
 
     t0 = ts.utc(d.year, d.month, d.day, 0, 0, 0)
     position0 = earth.at(t0).observe(sun)
@@ -229,7 +229,7 @@ def sunSD(d):               # used in sunmoontab(m)
     position1 = earth.at(t1).observe(sun)
     dec1 = position1.apparent().radec(epoch='date')[1]
     ds = dec1.degrees - dec0.degrees
-    dsm = u'%0.1f' %(ds * 60)	# convert to minutes of arc
+    dsm = u"%0.1f" %(ds * 60)	# convert to minutes of arc
     return sdsm, dsm
 
 def moonSD(d):              # used in sunmoontab(m)
@@ -239,7 +239,7 @@ def moonSD(d):              # used in sunmoontab(m)
     distance = position.apparent().radec(epoch='date')[2]
     dist_km = distance.km
     sdm = math.degrees(math.atan(1738.1/dist_km))	# equatorial radius of moon = 1738.1 km
-    sdmm = u'%0.1f' %(sdm * 60)	# convert to minutes of arc
+    sdmm = u"%0.1f" %(sdm * 60)	# convert to minutes of arc
     return sdmm
 
 def moonGHA(d):             # used in sunmoontab(m)
@@ -400,9 +400,9 @@ def vdm_Venus(d):           # used in planetstab(m)
     sha0 = (t0.gast - ra0.hours) * 15
     sha1 = (t1.gast - ra1.hours) * 15
     sha  = norm(sha1 - sha0) - 15
-    RAcorrm = u'%0.1f' %(sha * 60)	# convert to minutes of arc
+    RAcorrm = u"%0.1f" %(sha * 60)	# convert to minutes of arc
     Dcorr = dec1.degrees - dec0.degrees
-    Dcorrm = u'%0.1f' %(Dcorr * 60)	# convert to minutes of arc
+    Dcorrm = u"%0.1f" %(Dcorr * 60)	# convert to minutes of arc
     return RAcorrm, Dcorrm
 
 def vdm_Mars(d):            # used in planetstab(m)
@@ -421,9 +421,9 @@ def vdm_Mars(d):            # used in planetstab(m)
     sha0 = (t0.gast - ra0.hours) * 15
     sha1 = (t1.gast - ra1.hours) * 15
     sha  = norm(sha1 - sha0) - 15
-    RAcorrm = u'%0.1f' %(sha * 60)	# convert to minutes of arc
+    RAcorrm = u"%0.1f" %(sha * 60)	# convert to minutes of arc
     Dcorr = dec1.degrees - dec0.degrees
-    Dcorrm = u'%0.1f' %(Dcorr * 60)	# convert to minutes of arc
+    Dcorrm = u"%0.1f" %(Dcorr * 60)	# convert to minutes of arc
     return RAcorrm, Dcorrm
 
 def vdm_Jupiter(d):         # used in planetstab(m)
@@ -442,9 +442,9 @@ def vdm_Jupiter(d):         # used in planetstab(m)
     sha0 = (t0.gast - ra0.hours) * 15
     sha1 = (t1.gast - ra1.hours) * 15
     sha  = norm(sha1 - sha0) - 15
-    RAcorrm = u'%0.1f' %(sha * 60)	# convert to minutes of arc
+    RAcorrm = u"%0.1f" %(sha * 60)	# convert to minutes of arc
     Dcorr = dec1.degrees - dec0.degrees
-    Dcorrm = u'%0.1f' %(Dcorr * 60)	# convert to minutes of arc
+    Dcorrm = u"%0.1f" %(Dcorr * 60)	# convert to minutes of arc
     return RAcorrm, Dcorrm
 
 def vdm_Saturn(d):          # used in planetstab(m)
@@ -463,9 +463,9 @@ def vdm_Saturn(d):          # used in planetstab(m)
     sha0 = (t0.gast - ra0.hours) * 15
     sha1 = (t1.gast - ra1.hours) * 15
     sha  = norm(sha1 - sha0) - 15
-    RAcorrm = u'%0.1f' %(sha * 60)	# convert to minutes of arc
+    RAcorrm = u"%0.1f" %(sha * 60)	# convert to minutes of arc
     Dcorr = dec1.degrees - dec0.degrees
-    Dcorrm = u'%0.1f' %(Dcorr * 60)	# convert to minutes of arc
+    Dcorrm = u"%0.1f" %(Dcorr * 60)	# convert to minutes of arc
     return RAcorrm, Dcorrm
 
 #-----------------------------------------
@@ -507,7 +507,7 @@ def planetstransit(d):      # used in starstab
     ra0 = position0.apparent().radec(epoch='date')[0]	# RA
     vau = position0.apparent().radec(epoch='date')[2]	# distance
     vsha = fmtgha(0, ra0.hours)
-    hpvenus = u'%0.1f' %((math.tan(6371/(vau.au*149597870.7)))*60*180/math.pi)
+    hpvenus = u"%0.1f" %((math.tan(6371/(vau.au*149597870.7)))*60*180/math.pi)
 
     # calculate planet transit
     tfr = t0
@@ -518,14 +518,14 @@ def planetstransit(d):      # used in starstab
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(venus))
     #if len(y) != 1:
     #    print 'returned %s values' %len(y)
-    vtrans = rise_set(transit_time,y,u'0%s E transit' %degree_sign)[0]
+    vtrans = rise_set(transit_time,y,u"0%s E transit" %degree_sign)[0]
 
 # Mars
     position0 = earth.at(t0).observe(mars)
     ra0 = position0.apparent().radec(epoch='date')[0]	# RA
     mau = position0.apparent().radec(epoch='date')[2]	# distance
     marssha = fmtgha(0, ra0.hours)
-    hpmars = u'%0.1f' %((math.tan(6371/(mau.au*149597870.7)))*60*180/math.pi)
+    hpmars = u"%0.1f" %((math.tan(6371/(mau.au*149597870.7)))*60*180/math.pi)
 
     # calculate planet transit
     tfr = t0
@@ -533,7 +533,7 @@ def planetstransit(d):      # used in starstab
     position = earth.at(tfr).observe(mars)
     ra = position.apparent().radec(epoch='date')[0]
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(mars))
-    marstrans = rise_set(transit_time,y,u'0%s E transit' %degree_sign)[0]
+    marstrans = rise_set(transit_time,y,u"0%s E transit" %degree_sign)[0]
 
 # Jupiter
     position0 = earth.at(t0).observe(jupiter)
@@ -546,7 +546,7 @@ def planetstransit(d):      # used in starstab
     position = earth.at(tfr).observe(jupiter)
     ra = position.apparent().radec(epoch='date')[0]
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(jupiter))
-    jtrans = rise_set(transit_time,y,u'0%s E transit' %degree_sign)[0]
+    jtrans = rise_set(transit_time,y,u"0%s E transit" %degree_sign)[0]
     
 # Saturn
     position0 = earth.at(t0).observe(saturn)
@@ -559,7 +559,7 @@ def planetstransit(d):      # used in starstab
     position = earth.at(tfr).observe(saturn)
     ra = position.apparent().radec(epoch='date')[0]
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(saturn))
-    sattrans = rise_set(transit_time,y,u'0%s E transit' %degree_sign)[0]
+    sattrans = rise_set(transit_time,y,u"0%s E transit" %degree_sign)[0]
     
     return [vsha,vtrans,marssha,marstrans,jsha,jtrans,satsha,sattrans,hpmars,hpvenus]
 
@@ -679,8 +679,8 @@ def twilight(d, lat, hemisph):  # used in twilighttab (section 1)
     #       ...therefore daily tracking of the sun state is not possible.
 
     out = [0,0,0,0,0,0]
-    lats = u'%3.1f %s' %(abs(lat), hemisph)
-    locn = Topos(lats, u'0.0 E')
+    lats = u"%3.1f %s" %(abs(lat), hemisph)
+    locn = Topos(lats, u"0.0 E")
     dt = datetime.datetime(d.year, d.month, d.day, 0, 0, 0)
     dt -= datetime.timedelta(seconds=30)       # search from 30 seconds before midnight
     t0 = ts.utc(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
@@ -813,8 +813,8 @@ def moonrise_set(d, lat, hemisph):  # used in twilighttab (section 2)
     i = config.lat.index(lat)
     out  = ['--:--','--:--','--:--','--:--','--:--','--:--']	# first event
     out2 = ['--:--','--:--','--:--','--:--','--:--','--:--']	# second event on same day (rare)
-    lats = u'%3.1f %s' %(abs(lat), hemisph)
-    locn = Topos(lats, u'0.0 E')
+    lats = u"%3.1f %s" %(abs(lat), hemisph)
+    locn = Topos(lats, u"0.0 E")
     dt = datetime.datetime(d.year, d.month, d.day, 0, 0, 0)
     dt -= datetime.timedelta(seconds=30)       # search from 30 seconds before midnight
     t0 = ts.utc(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
@@ -1104,7 +1104,7 @@ def gha2mpa(gha):
     if min == 60:
         min = 0		# this cannot happen
         hr += 1
-    hhmm = u'%02d:%02d' %(hr,min)
+    hhmm = u"%02d:%02d" %(hr,min)
     return hhmm
 
 def gha2eqt(gha):
@@ -1125,9 +1125,9 @@ def gha2eqt(gha):
         sec = 0
         min += 1
     if min < 59:
-        mmss = u'%02d:%02d' %(min,sec)
+        mmss = u"%02d:%02d" %(min,sec)
     else:
-        mmss = u'??:??'		# indicate error
+        mmss = u"??:??"		# indicate error
     return mmss
 
 def find_new_moon(d):       # used in doublepage

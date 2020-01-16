@@ -818,8 +818,10 @@ def pages(first_day, p):
         if p == 122:	# if Full Almanac for a year...
             cmth = first_day.strftime("%b ")
             if cmth != pmth:
-                print		# progress indicator - next month
-                print(cmth,)
+                print() 	# progress indicator - next month
+                #print(cmth, end='')
+                sys.stdout.write(cmth)	# next month
+                sys.stdout.flush()
             else:
                 sys.stdout.write('.')	# progress indicator
                 sys.stdout.flush()
@@ -827,7 +829,7 @@ def pages(first_day, p):
         out = out + doublepage(first_day)
         first_day += datetime.timedelta(days=3)
     if p == 122:	# if Full Almanac for a year...
-        print		# newline to terminate progress indicator
+        print()		# newline to terminate progress indicator
     return out
 
 
@@ -928,6 +930,6 @@ def almanac(first_day, pagenum):
     \restoregeometry    % so it does not affect the rest of the pages
 """
     alm = alm + pages(first_day,pagenum)
-    alm = alm + u'\end{document}'
+    alm = alm + u"\end{document}"
     return alm
 
