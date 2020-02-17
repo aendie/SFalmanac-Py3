@@ -119,7 +119,7 @@ def rise_set(t, y, lats):
     set2 = '--:--'
     # 'finalstate' is True if above horizon; False if below horizon; None if unknown
     finalstate = None
-    if len(y) == 2:		# this happens most often
+    if len(t) == 2:		# this happens most often
         t0 = ts.utc((t[0].utc_datetime() + datetime.timedelta(seconds=30)).replace(second=0, microsecond=0))
         t1 = ts.utc((t[1].utc_datetime() + datetime.timedelta(seconds=30)).replace(second=0, microsecond=0))
         if y[0] and not(y[1]):
@@ -135,7 +135,7 @@ def rise_set(t, y, lats):
                 # this should never get here!
                 rise_set_error(y,lats,ts.utc(t[0].utc_datetime()))
     else:
-        if len(y) == 1:		# this happens ocassionally
+        if len(t) == 1:		# this happens ocassionally
             t0 = ts.utc((t[0].utc_datetime() + datetime.timedelta(seconds=30)).replace(second=0, microsecond=0))
             if y[0]:
                 rise = t0.utc_iso()[11:16]
@@ -144,7 +144,7 @@ def rise_set(t, y, lats):
                 sett = t0.utc_iso()[11:16]
                 finalstate = False
         else:
-            if len(y) == 3:		# this happens rarely (in high latitudes in summer)
+            if len(t) == 3:		# this happens rarely (in high latitudes in summer)
                 t0 = ts.utc((t[0].utc_datetime() + datetime.timedelta(seconds=30)).replace(second=0, microsecond=0))
                 t1 = ts.utc((t[1].utc_datetime() + datetime.timedelta(seconds=30)).replace(second=0, microsecond=0))
                 t2 = ts.utc((t[2].utc_datetime() + datetime.timedelta(seconds=30)).replace(second=0, microsecond=0))
@@ -163,7 +163,7 @@ def rise_set(t, y, lats):
                         # this should never get here!
                         rise_set_error(y,lats,ts.utc(t[0].utc_datetime()))
             else:
-                if len(y) > 3:
+                if len(t) > 3:
                     # this should never get here!
                     rise_set_error(y,lats,ts.utc(t[0].utc_datetime()))
 
