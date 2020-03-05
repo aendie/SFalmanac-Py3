@@ -1143,7 +1143,7 @@ def find_new_moon(d):       # used in doublepage
     t0 = ts.utc(d0.year, d0.month, d0.day, 12, 0, 0)
     t1 = ts.utc(d.year, d.month, d.day, 12, 0, 0)
     t, y = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
-    for i in range(len(y)):
+    for i in range(len(t)):
         if y[i] == 0:       # 0=New Moon, 1=First Quarter, 2=Full Moon, 3=Last Quarter
             PreviousNewMoon = t[i].utc_datetime()
 
@@ -1152,7 +1152,7 @@ def find_new_moon(d):       # used in doublepage
         t2 = ts.utc(PreviousNewMoon + datetime.timedelta(days=28))
         t3 = ts.utc(PreviousNewMoon + datetime.timedelta(days=30))
         t, y = almanac.find_discrete(t2, t3, almanac.moon_phases(eph))
-        for i in range(len(y)):
+        for i in range(len(t)):
             if y[i] == 0:       # 0 = New Moon
                 NextNewMoon = t[i].utc_datetime()
 
