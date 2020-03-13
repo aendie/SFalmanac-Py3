@@ -21,6 +21,7 @@
 
 tbls = ''		# table style (global variable)
 decf = ''		# Declination format (global variable)
+pgsz = 'A4'     # page size 'A4' or 'Letter' (global variable)
 logfileopen = False
 stopwatch = 0.0 # time spent in a section of code
 

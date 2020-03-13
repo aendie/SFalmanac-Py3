@@ -26,7 +26,7 @@ ephem_venus   = ephem.Venus()
 ephem_mars    = ephem.Mars()
 ephem_jupiter = ephem.Jupiter()
 ephem_saturn  = ephem.Saturn()
-degree_sign= u'\N{DEGREE SIGN}'
+#degree_sign= u'\N{DEGREE SIGN}'
 
 #------------------------------------------------
 #   Venus, Mars, Jupiter & Saturn calculations
@@ -34,28 +34,28 @@ degree_sign= u'\N{DEGREE SIGN}'
 
 def magnitudes(date):       # used in planetstab(m)
     # returns  magitude for the navigational planets.
-    # (Skyfield 1.16 does not provide this)
+    # (Skyfield 1.17 does not provide this)
     
     obs = ephem.Observer()
     
     #Venus
     obs.date = date
     ephem_venus.compute(date)
-    mag_venus = u"%0.1f" %(ephem_venus.mag)
+    mag_venus = "{:0.1f}".format(ephem_venus.mag)  # mag_venus = "%0.1f" %(ephem_venus.mag)
     
     #Mars
     obs.date = date
     ephem_mars.compute(date)
-    mag_mars = u"%0.1f" %(ephem_mars.mag)
+    mag_mars = "{:0.1f}".format(ephem_mars.mag)    # mag_mars = "%0.1f" %(ephem_mars.mag)
     
     #Jupiter
     obs.date = date
     ephem_jupiter.compute(date)
-    mag_jupiter = u"%0.1f" %(ephem_jupiter.mag)
+    mag_jupiter = "{:0.1f}".format(ephem_jupiter.mag) # mag_jupiter = "%0.1f" %(ephem_jupiter.mag)
     
     #Saturn
     obs.date = date
     ephem_saturn.compute(date)
-    mag_saturn = u"%0.1f" %(ephem_saturn.mag)
+    mag_saturn = "{:0.1f}".format(ephem_saturn.mag)  # mag_saturn = "%0.1f" %(ephem_saturn.mag)
     
     return mag_venus,mag_mars,mag_jupiter,mag_saturn
