@@ -804,8 +804,8 @@ def doublepage(date, page1):
 
     find_new_moon(date)
     #import alma_skyfield
-    #print("previous  new moon: %s" %alma_skyfield.PreviousNewMoon)
-    #print("next      new moon: %s" %alma_skyfield.NextNewMoon)
+    #print("previous  new moon: {}".fotmat(alma_skyfield.PreviousNewMoon))
+    #print("next      new moon: {}".fotmat(alma_skyfield.NextNewMoon))
 
     page = ''
     if not(page1):
