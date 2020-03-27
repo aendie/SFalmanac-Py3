@@ -87,7 +87,7 @@ the [old](https://docs.python.org/2/library/stdtypes.html#string-formatting) sty
 &nbsp;&nbsp;&nbsp;&nbsp;**sudo apt install texlive-latex-extra**
 
 &nbsp;&nbsp;&nbsp;&nbsp;Install the required astronomical libraries etc.:  
-&nbsp;&nbsp;&nbsp;&nbsp;**pip3 install pyephem**
+&nbsp;&nbsp;&nbsp;&nbsp;**pip3 install pyephem**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip3 install skyfield**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip3 install pandas**  
 
