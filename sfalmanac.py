@@ -46,6 +46,7 @@ smth = "{:02d}".format(d.month)     # smth = "%02d" % d.month
 syr  = "{}".format(d.year)          # syr  = "%s" % d.year
 symd = syr + smth + sday
 sdmy = sday + "." + smth + "." + syr
+#print('Today is {}'.format(symd))
 yrmin = config.ephemeris[config.ephndx][1]
 yrmax = config.ephemeris[config.ephndx][2]
 

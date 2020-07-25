@@ -722,7 +722,6 @@ def twilight(d, lat, hemisph):  # used in twilighttab (section 1)
 
     return out
 
-##NEW##
 def midnightsun(d, hemisph):
     # simple way to fudge whether the sun is up or down when there's no
     # sunrise or sunset on date 'dt' depending on the hemisphere only.
@@ -801,7 +800,6 @@ def getsunstate(dt, lat, hemisph, horizon, j):
 #   MOONRISE/-SET table
 #-------------------------
 
-##NEW##
 # create a list of 'moon above/below horizon' states per Latitude...
 #    None = unknown; True = above horizon (visible); False = below horizon (not visible)
 moonvisible = [None] * 31       # moonvisible[0] up to moonvisible[30]
@@ -887,7 +885,7 @@ def moonday(topos, degBelowHorizon):
     is_moon_up_at.rough_period = 0.5  # twice a day
     return is_moon_up_at
 
-##NEW##
+
 def moonstate(ndx):
     # return the current moonstate (if known)
     out = '--:--'
@@ -903,7 +901,7 @@ def moonstate(ndx):
         out = r'''\rule{12Pt}{4Pt}'''
     return out
 
-##NEW##
+
 def getmoonstate(dt, lat, hemisph):
     # populate the moon state (visible or not) for the specified date & latitude
     # note: the first parameter 'dt' is already a datetime 30 seconds before midnight
@@ -1041,7 +1039,62 @@ def find_transit(d, ghaList, modeLT):
 
     return transit_time
 
-def equation_of_time(d, d1, UpperList, LowerList):  # used in twilighttab (section 3)
+##NEW##
+def moonphase(d):           # used in twilighttab (section 3)
+    # returns the moon's elongation (angle to the sun)
+
+    # convert python 'date' to 'date with time' ...
+    dt = datetime.datetime(d.year, d.month, d.day, 0, 0, 0)
+    # phase is calculated at noon
+    dt += datetime.timedelta(hours=12)
+
+    t12 = ts.utc(d.year, d.month, d.day, 12, 0, 0)
+    phase_angle = almanac.phase_angle(eph, 'moon', t12)
+    elong = phase_angle.radians
+
+    # phase_angle.degrees is ...
+    # 180 at New Moon, drops to 0 at Full Moon, then rises to 180 at New Moon
+    
+    #pnm = PreviousNewMoon.replace(tzinfo=None)
+    #nfm = NextFullMoon.replace(tzinfo=None)
+    #pfm = PreviousFullMoon.replace(tzinfo=None)
+    #nnm = NextNewMoon.replace(tzinfo=None)
+
+    if WaxingMoon:
+        phase = math.pi - phase_angle.radians
+    else:
+        phase = math.pi + phase_angle.radians
+
+    return phase
+
+##NEW##
+def moonage(d, d1):         # used in twilighttab (section 3)
+    # return the moon's 'age' and percent illuminated
+
+    # percent illumination is calculated at noon
+    t12 = ts.utc(d.year, d.month, d.day, 12, 0, 0)
+    phase_angle = almanac.phase_angle(eph, 'moon', t12)
+    pctrad = 50 * (1.0 + math.cos(phase_angle.radians))
+    pct = "{:.0f}".format(pctrad)
+
+    # calculate age of moon
+
+    pnm = PreviousNewMoon
+    nnm = NextNewMoon
+    #dt0 = datetime.date(pnm.year, pnm.month, pnm.day)
+    #dt1 = datetime.date(nnm.year, nnm.month, nnm.day)
+    dt  = datetime.datetime.combine(d1, datetime.time(0, 0))
+    age1td = dt-pnm.replace(tzinfo=None)
+    age2td = dt-nnm.replace(tzinfo=None)
+    age1 = age1td.days
+    age2 = age2td.days
+    age = age1
+    if age2 >= 0:
+        age = age2
+
+    return age,pct
+
+def equation_of_time(d, d1, UpperList, LowerList, extras):  # used in twilighttab (section 3)
     # returns equation of time, the sun's transit time, 
     # the moon's transit-, antitransit-time, age and percent illumination.
     # (Equation of Time = Mean solar time - Apparent solar time)
@@ -1064,10 +1117,6 @@ def equation_of_time(d, d1, UpperList, LowerList):  # used in twilighttab (secti
     if gha12 > 270:
         eqt12 = r"\colorbox{{lightgray!80}}{{{}}}".format(eqt12)
 
-    phase_angle = almanac.phase_angle(eph, 'moon', t12)
-    pctrad = 50 * (1.0 + math.cos(phase_angle.radians))
-    pct = "{:.0f}".format(pctrad)
-
     # !! transit times are rounded to the nearest minute,
     # !! so the search needs to start and end 30 sec earlier
     # !! e.g. after 23h 59m 30s rounds up to 00:00 next day
@@ -1079,6 +1128,13 @@ def equation_of_time(d, d1, UpperList, LowerList):  # used in twilighttab (secti
     # calculate moon lower transit
 
     mp_lower = find_transit(d, LowerList, True)
+
+    if not(extras):     # omit 'age' and 'pct'
+        return eqt00,eqt12,mpa12,mp_upper,mp_lower
+
+    phase_angle = almanac.phase_angle(eph, 'moon', t12)
+    pctrad = 50 * (1.0 + math.cos(phase_angle.radians))
+    pct = "{:.0f}".format(pctrad)
 
     # calculate age of moon
 
@@ -1138,11 +1194,17 @@ def gha2eqt(gha):
     return mmss
 
 def find_new_moon(d):       # used in doublepage
-    # find previous & next new moon
+    # find previous & next new moon and full moon
     global PreviousNewMoon
+    global PreviousFullMoon
     global NextNewMoon
+    global NextFullMoon
+    global WaxingMoon
     PreviousNewMoon  = None
     NextNewMoon      = None
+    PreviousFullMoon = None
+    NextFullMoon     = None
+    WaxingMoon = None
     # note: the python datetimes above are timezone 'aware' (not 'naive')
 
     # search from 30 days earlier than noon... till noon on this day
@@ -1153,8 +1215,12 @@ def find_new_moon(d):       # used in doublepage
     for i in range(len(t)):
         if y[i] == 0:       # 0=New Moon, 1=First Quarter, 2=Full Moon, 3=Last Quarter
             PreviousNewMoon = t[i].utc_datetime()
+        if y[i] == 2:       # 2 = Full Moon
+            PreviousFullMoon = t[i].utc_datetime()
+    # note: if two PreviousNewMoons are found within the range, the last is stored
+    # note: if two PreviousFullMoons are found within the range, the last is stored
 
-    if PreviousNewMoon != None:
+    if PreviousNewMoon != None and PreviousFullMoon != None:
         # synodic month = about 29.53 days
         t2 = ts.utc(PreviousNewMoon + datetime.timedelta(days=28))
         t3 = ts.utc(PreviousNewMoon + datetime.timedelta(days=30))
@@ -1162,36 +1228,8 @@ def find_new_moon(d):       # used in doublepage
         for i in range(len(t)):
             if y[i] == 0:       # 0 = New Moon
                 NextNewMoon = t[i].utc_datetime()
+
+        WaxingMoon = True
+        if PreviousFullMoon > PreviousNewMoon:
+            WaxingMoon = False
     return
-
-##def uppertransit():
-    # Build a function of time that returns the moon upper transit time.
-
-##    def is_moon_transit_at(t):
-##        """The function that this returns will expect a single argument that is a 
-##		:class:`~skyfield.timelib.Time` and will return ``True`` if the moon is up
-##		or twilight has started, else ``False``."""
-##        t._nutation_angles = iau2000b(t.tt)
-        # Return `True` if the meridian is crossed by time `t`.
-##        position = earth.at(t).observe(moon)
-##        ra = position.apparent().radec(epoch='date')[0]
-##        return (t.gast-ra.hours+12) % 24 - 12 > 0
-
-##    is_moon_transit_at.rough_period = 0.01  # search increment hint
-##    return is_moon_transit_at
-
-##def lowertransit():
-    # Build a function of time that returns the moon lower transit time.
-
-##    def is_moon_transit_at(t):
-##        """The function that this returns will expect a single argument that is a 
-##		:class:`~skyfield.timelib.Time` and will return ``True`` if the moon is up
-##		or twilight has started, else ``False``."""
-##        t._nutation_angles = iau2000b(t.tt)
-        # Return `True` if the antimeridian is crossed by time `t`.
-##        position = earth.at(t).observe(moon)
-##        ra = position.apparent().radec(epoch='date')[0]
-##        return (t.gast-ra.hours) % 24 - 12 > 0
-
-##    is_moon_transit_at.rough_period = 0.01  # search increment hint
-##    return is_moon_transit_at
