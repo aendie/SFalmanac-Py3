@@ -264,28 +264,25 @@ def moonsdaugment(hp, deg, min):
 
 
 def moonsdaugmenttab():
-	#Hdeg = 0
 	hp = 54.0
-
-	#HP $H_{a}$ & \textbf{0} & \textbf{10} & \textbf{20} & \textbf{30} & \textbf{40} & \textbf{50} & \textbf{60} & \textbf{70} & \textbf{80} & \textbf{90} \\
 
 	tab = r'''\noindent 
 	\begin{tabular}[t]{|c|ccccccccc|}
 	\multicolumn{10}{c}{\textbf{Moon SD augmentation}}\\
 	'''
 	tab += r"""\hline 
-	HP $H_{a}$ & \textbf{10$^\circ$} & \textbf{20} & \textbf{30} & \textbf{40} & \textbf{50} & \textbf{60} & \textbf{70} & \textbf{80} & \textbf{90} \\
+	HP $H_{a}$ & \textbf{10$^\circ$} & \textbf{20$^\circ$} & \textbf{30$^\circ$} & \textbf{40$^\circ$} & \textbf{50$^\circ$} & \textbf{60$^\circ$} & \textbf{70$^\circ$} & \textbf{80$^\circ$} & \textbf{90$^\circ$} \\
 	\hline
 	"""
-	while hp <= 61.5:#Hdeg <= 90:
+	while hp <= 61.5:
 		Hdeg = 10
 		line = r"\textbf{{ {}}} ".format(hp)
-		while Hdeg <= 90:#hp < 0.7:
+		while Hdeg <= 90:
 			line += "& {:.1f} ".format(moonsdaugment(hp, Hdeg, 0))
-			Hdeg += 10#hp += 0.1
+			Hdeg += 10
 		line += "\\\ \n"
 		tab += line
-		hp += 1.5#Hdeg += 10
+		hp += 1.5
 	tab = tab + r"""\hline
 	\end{tabular}
 	"""
