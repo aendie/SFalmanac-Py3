@@ -232,16 +232,18 @@ def venparallax():
 	Hdeg=10 
 	
 	tab = r'''\noindent 
-	\begin{tabular}[t]{|c|cccccc|}
-	\multicolumn{7}{c}{\textbf{Parallax of Venus and Mars}}\\
+	\begin{tabular}[t]{|c|c|cccccc|}
+	\multicolumn{8}{c}{\textbf{Parallax of the Sun, Venus and Mars}}\\
 	'''
 	tab += r"""\hline 
-	$H_{a}$ HP & \textbf{.1'} & \textbf{.2'} & \textbf{.3} & \textbf{.4'} & \textbf{.5'} & \textbf{.6'} \\
+	$H_{a}$ HP & \textbf{Sun} & \textbf{.1'} & \textbf{.2'} & \textbf{.3} & \textbf{.4'} & \textbf{.5'} & \textbf{.6'} \\
 	\hline
 	"""
 	while Hdeg<90:
 		hp = 0.1
+		hpsun = 0.1489
 		line = r"\textbf{{ {}$^\circ$}} ".format(Hdeg)
+		line += "& {:.2f} ".format(parallax(hpsun, Hdeg, 0))  # Sun parallax
 		while hp < 0.7:
 			line += "& {:.1f} ".format(parallax(hp, Hdeg, 0))
 			hp += 0.1
@@ -305,9 +307,9 @@ The next correction is for refraction in the earth's atmosphere. As usual this t
 \[R_0=\cot \left( H_a + \frac{7.31}{H_a+4.4}\right)\]
 For other than standard conditions, calculate a correction factor for $R_0$ by: \[f=\frac{0.28P}{T+273}\] where $P$ is the pressure in hectopascal and $T$ is the temperature in $^\circ$C. No table is given for this correction so far.
 \subsubsection*{Parallax}
-For moon sight (and if necessary for Mars and Venus) a parallax correction is necessary. For Mars and Venus the horizontal parallax ($HP$) is never more than 0.5' and can be omitted if this kind of precision is not necessary. The parallax ($P$) can be calculated from horizontal parallax ($HP$) and apparent altitude $H_a$ with the following formula:
+For moon sight (and if necessary for the Sun, Mars and Venus) a parallax correction is necessary. For the Sun, Mars and Venus the horizontal parallax ($HP$) is never more than 0.6' and can be omitted if this kind of precision is not necessary. The parallax ($P$) can be calculated from horizontal parallax ($HP$) and apparent altitude $H_a$ with the following formula:
 \[P={HP} \times \cos(H_a)\]
-The table for the moon gives the parallax for a horizontal parallax of 54' which is the lowest value for the moon. For all other values, the value in the lower half of the table has to be added. Note that this table is only for parallax and does not correct for refraction and semidiameter. For all moon and sun sights, semidiameter has to be added for lower limb sights and subtracted for upper limb sights. The value for HP and semidiameter is tabulated in the daily pages. The smaller parallax table is for parallax of Venus and Mars.
+The table for the moon gives the parallax for a horizontal parallax of 54' which is the lowest value for the moon. For all other values, the value in the lower half of the table has to be added. Note that this table is only for parallax and does not correct for refraction and semidiameter. For all moon and sun sights, semidiameter has to be added for lower limb sights and subtracted for upper limb sights. The value for HP and semidiameter is tabulated in the daily pages. The smaller parallax table is for parallax of the Sun, Venus and Mars.
 \subsubsection*{Altitude correction}
 To correct your sextant altitude $H_s$ do the following:
 Calculate $H_a$ by
@@ -332,7 +334,7 @@ where $A$ is the azimuth angle, $L$ is the latitude, $d$ is the declination and 
 if sys.version_info[0] != 3:
     raise Exception("This runs with Python 3")
 
-fn = "inc"
+fn = "increments_corrections"
 filename = fn + ".tex"
 outfile = open(filename, mode="w", encoding="utf8")
 outfile.write(makelatex())
