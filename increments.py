@@ -323,7 +323,7 @@ def makelatex():
 	lx = lx + venparallax()
 	lx = lx + moonsdaugmenttab()
 	lx = lx + r'''\end{scriptsize} \newpage
-	\section*{About these tables}
+	\small\section*{About these tables}
 	The preceding static tables are independent from the year. They differ from the tables found in the official paper versions of the Nautical almanac in two important considerations. 
 \begin{itemize}
       \item My tables are not arranged as \textit{critical} tables. So chose the value that fits best to your value and interpolate in the rare cases where this should be necessary.
@@ -345,7 +345,8 @@ For moon sight (and if necessary for the Sun, Mars and Venus) a parallax correct
 \[P={HP} \times \cos(H_a)\]
 The table for the moon gives the parallax for a horizontal parallax of 54' which is the lowest value for the moon. For all other values, the value in the lower half of the table has to be added. Note that this table is only for parallax and does not correct for refraction and semidiameter. For all moon and sun sights, semidiameter has to be added for lower limb sights and subtracted for upper limb sights. The value for HP and semidiameter is tabulated in the daily pages. The smaller parallax table is for parallax of the Sun, Venus and Mars.
 \subsubsection*{Moon SD augmentation}
-Due to its proximity, moon topo- and geocentric SD differ. The Moon SD augmentation table provides a correction to be added to the moon SD before calculating $H_o$.
+Due to its proximity, moon topo- and geocentric SD differ. The Moon SD augmentation table provides a correction to be added to the moon SD before calculating $H_o$. This correction was calculated using Stark approximate formula:
+\[SD_{aug}=k \cdot {HP} \div (1 - \sin(HP) \cdot \sin(H_a))\]
 \subsubsection*{Altitude correction}
 To correct your sextant altitude $H_s$ do the following:
 Calculate $H_a$ by
