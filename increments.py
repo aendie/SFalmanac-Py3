@@ -258,7 +258,7 @@ def venparallax():
 def moonsdaugment(hp, deg, min):
 	#returns moon SD augmentation in min due to topocentric vs geocentric difference
 	#using Stark approx. formula
-	k = 0.2725 #ratio radius moon/earth
+	k = 0.2725 #ratio radius moon/earth - by definition SD = k * hp
 	aug = ((k * hp / (1 - sin(rad(0, hp)) * sin(rad(deg, min)))) - k * hp)
 	return aug
 
@@ -346,7 +346,7 @@ For moon sight (and if necessary for the Sun, Mars and Venus) a parallax correct
 The table for the moon gives the parallax for a horizontal parallax of 54' which is the lowest value for the moon. For all other values, the value in the lower half of the table has to be added. Note that this table is only for parallax and does not correct for refraction and semidiameter. For all moon and sun sights, semidiameter has to be added for lower limb sights and subtracted for upper limb sights. The value for HP and semidiameter is tabulated in the daily pages. The smaller parallax table is for parallax of the Sun, Venus and Mars.
 \subsubsection*{Moon SD augmentation}
 Due to its proximity, moon topo- and geocentric SD differ. The Moon SD augmentation table provides a correction to be added to the moon SD before calculating $H_o$. This correction was calculated using Stark approximate formula:
-\[SD_{aug}=k \cdot {HP} \div (1 - \sin(HP) \cdot \sin(H_a))\]
+\[SD_{aug}=SD \div (1 - \sin(HP) \cdot \sin(H_a))\]
 \subsubsection*{Altitude correction}
 To correct your sextant altitude $H_s$ do the following:
 Calculate $H_a$ by
