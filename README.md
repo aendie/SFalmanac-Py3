@@ -99,7 +99,7 @@ A new option has been added into config.py: *moonimg = True* will display a grap
 
 &nbsp;&nbsp;&nbsp;&nbsp;On Windows 10 Version 2004 and 20H2 there is currently a bug that may cause the following error:  
 &nbsp;&nbsp;&nbsp;&nbsp;**RuntimeError: The current Numpy installation fails to pass a sanity check due to a bug in the windows runtime.**  
-&nbsp;&nbsp;&nbsp;&nbsp;The final resolution is expected around end of January 2021, however the following workaround will bypass the problem:  
+&nbsp;&nbsp;&nbsp;&nbsp;The final resolution is expected end of January 2021, however the following workaround will bypass the problem:  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip uninstall numpy**
 &nbsp;&nbsp;&nbsp;&nbsp;**pip install numpy==1.19.3**
 
