@@ -2,13 +2,14 @@
 
 SFalmanac-Py3 is a Python 3 script that creates the daily pages of the Nautical Almanac. These are tables that are needed for celestial navigation with a sextant. Although you are strongly advised to purchase the official Nautical Almanac, this program will reproduce the tables with no warranty or guarantee of accuracy.
 
-SFalmanac-Py3 was developed with the intention of having identical output format as Pyalmanac-Py3. As opposed to the older PyEphem astronomy library, the intention was for it to be based entirely on the newer Skyfield astronomical library: https://rhodesmill.org/skyfield/, however PyEphem is still required to calculate the planet magnitudes.
+SFalmanac-Py3 was developed with the intention of having identical output format as Pyalmanac-Py3. As opposed to the older Ephem astronomy library, the intention was for it to be based entirely on the newer Skyfield astronomical library: https://rhodesmill.org/skyfield/, however Ephem is still required to calculate the planet magnitudes.
 
-It uses the star database in Skyfield, which is based on data from the Hipparcos Catalogue. The principal disadvantage is that calculating twilight (actual, civil and nautical sunrise/sunset) and moonrise/moonset is **extremely** slow. As a consequence of this a new hybrid version is available that is four times faster. (The hybrid version uses PyEphem to calculate twilight and moonrise/moonset with only a minimal loss of accuracy.)
+It uses the star database in Skyfield, which is based on data from the Hipparcos Catalogue. The principal disadvantage is that calculating twilight (actual, civil and nautical sunrise/sunset) and moonrise/moonset is **extremely** slow. As a consequence of this a new hybrid version is available that is four times faster. (The hybrid version uses Ephem to calculate twilight and moonrise/moonset with only a minimal loss of accuracy.)
 
-NOTE: two scripts are included (both can be run): 'sfalmanac.py' and 'increments.py'  
+**NOTE: the Python Package Index (PyPI) edition is here:** https://pypi.org/project/sfalmanac/  
+**Users are encouraged to install the PyPI edition instead.**  
 NOTE: a Python 2.7 script with identical functionality can be found at:  https://github.com/aendie/SFalmanac-Py2  
-NOTE: a 100% [PyEphem](https://rhodesmill.org/pyephem/) version of SFalmanac is available here:
+NOTE: a 100% [Ephem](https://rhodesmill.org/pyephem/) version of SFalmanac is available here:
 https://github.com/aendie/Pyalmanac-Py3  
 NOTE: the faster hybrid version is available here: 
 https://github.com/aendie/SkyAlmanac-Py3
@@ -16,7 +17,7 @@ https://github.com/aendie/SkyAlmanac-Py3
 An aim of this development was to maintain:
 
 * **identical PDF output formatting with a similar control program**  
-	 It is then possible to display both generated tables (from PyEphem and Skyfield)
+	 It is then possible to display both generated tables (from Ephem and Skyfield)
 	 and compare what has changed by flipping between the two tabs in Adobe Acrobat Reader DC.
 	 Anything that has changed flashes, thereby drawing your attention to it.
 	 This crude and simple method is quite effective in highlihgting data that
@@ -55,16 +56,21 @@ Bugfix applied to correct the Meridian Passage times.
 
 A new option has been added into config.py: *moonimg = True* will display a graphic image of the moon phase (making the resulting PDF slightly larger). Use *moonimg = False* to revert to the previous format without the graphic moon image.
 
+**UPDATE: Feb 2021**
+
+Minor changes are included here to this original (non-PyPI) edition to reflect some of the adaptation that was required (e.g. integrate *increments.py* into *sfalmanac.py* as Option 5) to create a PyPI (Python Package Index) edition making this original (non-PyPI) and the PyPI editions similar. Both editions create identical almanacs and the [PyPI edition](https://pypi.org/project/sfalmanac/) is the preferred choice for users.
+
 ## Requirements
 
 &nbsp;&nbsp;&nbsp;&nbsp;Most of the computation is done by the free Skyfield library.  
-&nbsp;&nbsp;&nbsp;&nbsp;Typesetting is done by MiKTeX or TeX Live so you first need to install:
+&nbsp;&nbsp;&nbsp;&nbsp;Typesetting is typically done by MiKTeX or TeX Live.  
+&nbsp;&nbsp;&nbsp;&nbsp;These need to be installed:
 
 * Python v3.4 or higher (the latest version is recommended)
 * Skyfield 1.35 (see the Skyfield Changelog)
 * Pandas (to load the Hipparcos catalog; tested: 1.0.3 and 1.1.4)
-* Ephem 3.7.6 or 3.7.7 (required for planet magnitudes)
-* TeX/LaTeX&nbsp;&nbsp;or&nbsp;&nbsp;MiKTeX&nbsp;&nbsp;or&nbsp;&nbsp;TeX Live
+* Ephem >= 3.7.6 (required for planet magnitudes)
+* MiKTeX&nbsp;&nbsp;or&nbsp;&nbsp;TeX Live
 
 ## Files required in the execution folder:
 
@@ -91,7 +97,7 @@ A new option has been added into config.py: *moonimg = True* will display a grap
 &nbsp;&nbsp;&nbsp;&nbsp;**python.exe -m pip install --upgrade pip**  
 &nbsp;&nbsp;&nbsp;&nbsp;... for a first install (it's preferable to install *wheel* first):  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip3 install wheel**  
-&nbsp;&nbsp;&nbsp;&nbsp;**pip3 uninstall pyephem**  
+&nbsp;&nbsp;&nbsp;&nbsp;**pip3 uninstall pyephem ephem**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip3 install ephem**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip3 install skyfield**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip3 install pandas**  
@@ -101,7 +107,7 @@ A new option has been added into config.py: *moonimg = True* will display a grap
 &nbsp;&nbsp;&nbsp;&nbsp;Put the required files for SFalmanac in a new folder, run Command Prompt in that folder and start with:  
 &nbsp;&nbsp;&nbsp;&nbsp;**py -3 sfalmanac.py**
 
-&nbsp;&nbsp;&nbsp;&nbsp;If using MiKTeX 21 or higher, running **py -3 increments.py** will probably fail with  
+&nbsp;&nbsp;&nbsp;&nbsp;If using MiKTeX 21 or higher, executing 'option 5' (Increments and Corrections) will probably fail with  
 &nbsp;&nbsp;&nbsp;&nbsp;**! TeX capacity exceeded, sorry [main memory size=3000000].**  
 &nbsp;&nbsp;&nbsp;&nbsp;To resolve this problem (assuming MiKTeX has been installed for all users),  
 &nbsp;&nbsp;&nbsp;&nbsp;open a Command Prompt as Administrator and enter:  
@@ -122,7 +128,7 @@ A new option has been added into config.py: *moonimg = True* will display a grap
 
 &nbsp;&nbsp;&nbsp;&nbsp;Install the required astronomical libraries etc.:  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip3 install wheel**  
-&nbsp;&nbsp;&nbsp;&nbsp;**pip3 uninstall pyephem**  
+&nbsp;&nbsp;&nbsp;&nbsp;**pip3 uninstall pyephem ephem**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip3 install ephem**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip3 install skyfield**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip3 install pandas**  
@@ -135,12 +141,12 @@ A new option has been added into config.py: *moonimg = True* will display a grap
 
 &nbsp;&nbsp;&nbsp;&nbsp;Every Mac comes with python preinstalled.  
 &nbsp;&nbsp;&nbsp;&nbsp;(Please choose this version of SFalmanac if Python 3.* is installed.)  
-&nbsp;&nbsp;&nbsp;&nbsp;You need to install the PyEphem and Skyfield libraries to use SFalmanac.  
+&nbsp;&nbsp;&nbsp;&nbsp;You need to install the Ephem and Skyfield libraries to use SFalmanac.  
 &nbsp;&nbsp;&nbsp;&nbsp;Type the following commands at the commandline (terminal app):
 
 &nbsp;&nbsp;&nbsp;&nbsp;**sudo easy_install pip**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip install wheel**  
-&nbsp;&nbsp;&nbsp;&nbsp;**pip3 uninstall pyephem**  
+&nbsp;&nbsp;&nbsp;&nbsp;**pip3 uninstall pyephem ephem**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip3 install ephem**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip install skyfield**  
 &nbsp;&nbsp;&nbsp;&nbsp;**pip install pandas**  

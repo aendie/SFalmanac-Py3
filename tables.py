@@ -22,11 +22,14 @@
 #       will be removed from Python at some later time. See:
 # https://docs.python.org/3/whatsnew/3.0.html#pep-3101-a-new-approach-to-string-formatting
 
-import config
+# Standard library imports
 import datetime		# required for .timedelta()
 import sys			# required for .stdout.write()
-from alma_ephem import *
+import math
+# Local application imports
 from alma_skyfield import *
+from alma_ephem import *
+import config
 
 UpperLists = [[], [], []]    # moon GHA per hour for 3 days
 LowerLists = [[], [], []]    # moon colong GHA per hour for 3 days
