@@ -63,7 +63,7 @@ Minor changes are included here to this original (non-PyPI) edition to reflect s
 
 **UPDATE: Mar 2021**
 
-&nbsp;&nbsp;&nbsp;&nbsp;:smiley:***UT is the new timescale employed in the almanac.***:smiley:
+&nbsp;&nbsp;&nbsp;&nbsp;:smiley:&nbsp;&nbsp;***UT is the new timescale employed in the almanac.***&nbsp;&nbsp;:smiley:
 
 Two new options have been added into config.py: *useIERS = True* instructs Skyfield (if >= 1.31) to download Earth orientation data from IERS (International Earth Rotation and Reference Systems Service). *ageIERS = 30* instructs Skyfield to download fresh data from IERS if older tham that number of days. This implies greater accuracy for the generated almanacs (if Skyfield >= 1.31).
 
