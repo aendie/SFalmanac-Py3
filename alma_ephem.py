@@ -18,7 +18,7 @@
 #   with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # This contains one function to calculate planet magnitudes...
-# ... because these are not in Skyfield 1.11
+# ... because these are not in Skyfield yet
 
 # Third party imports
 import ephem        # required only for planet magnitudes

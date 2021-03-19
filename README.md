@@ -1,6 +1,7 @@
 # SFalmanac-Py3
 
-SFalmanac-Py3 is a Python 3 script that creates the daily pages of the Nautical Almanac. These are tables that are needed for celestial navigation with a sextant. Although you are strongly advised to purchase the official Nautical Almanac, this program will reproduce the tables with no warranty or guarantee of accuracy.
+SFalmanac-Py3 is a Python 3 script that creates the daily pages of the Nautical Almanac **using the UT1 timescale**. :smiley: Official Nautical Almanacs employ a UT timescale (equivalent to UT1).
+These are tables that are needed for celestial navigation with a sextant. Although you are strongly advised to purchase the official Nautical Almanac, this program will reproduce the tables with no warranty or guarantee of accuracy.
 
 SFalmanac-Py3 was developed with the intention of having identical output format as Pyalmanac-Py3. As opposed to the older Ephem astronomy library, the intention was for it to be based entirely on the newer Skyfield astronomical library: https://rhodesmill.org/skyfield/, however Ephem is still required to calculate the planet magnitudes.
 
@@ -60,6 +61,15 @@ A new option has been added into config.py: *moonimg = True* will display a grap
 
 Minor changes are included here to this original (non-PyPI) edition to reflect some of the adaptation that was required (e.g. integrate *increments.py* into *sfalmanac.py* as Option 5) to create a PyPI (Python Package Index) edition making this original (non-PyPI) and the PyPI editions similar. Both editions create identical almanacs and the [PyPI edition](https://pypi.org/project/sfalmanac/) is the preferred choice for users.
 
+**UPDATE: Mar 2021**
+
+&nbsp;&nbsp;&nbsp;&nbsp;***UT is the new timescale employed in the almanac.***
+
+Two new options have been added into config.py: *useIERS = True* instructs Skyfield (if >= 1.31) to download Earth orientation data from IERS (International Earth Rotation and Reference Systems Service). *ageIERS = 30* instructs Skyfield to download fresh data from IERS if older tham that number of days. This implies greater accuracy for the generated almanacs (if Skyfield >= 1.31).
+
+Note that although you may be using the de421.bsp ephemeris (valid from 1900 to 2050), the IERS currently specifies the validity of Earth Orientation Parameters (EOP) from 2nd January 1973 to 
+15th May 2022. Refer to the [IERS web site](https://www.iers.org/IERS/EN/Home/home_node.html) for current information.
+
 ## Requirements
 
 &nbsp;&nbsp;&nbsp;&nbsp;Most of the computation is done by the free Skyfield library.  
@@ -68,7 +78,7 @@ Minor changes are included here to this original (non-PyPI) edition to reflect s
 
 * Python v3.4 or higher (the latest version is recommended)
 * Skyfield 1.35 (see the Skyfield Changelog)
-* Pandas (to load the Hipparcos catalog; tested: 1.0.3 and 1.1.4)
+* Pandas >= 1.0 (to load the Hipparcos catalog; tested: 1.0.3 and 1.1.4)
 * Ephem >= 3.7.6 (required for planet magnitudes)
 * MiKTeX&nbsp;&nbsp;or&nbsp;&nbsp;TeX Live
 
