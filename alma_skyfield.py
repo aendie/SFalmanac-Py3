@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-#   Copyright (C) 2019  Andrew Bauer
+#   Copyright (C) 2021  Andrew Bauer
 
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ import datetime
 import time         # 00000 - stopwatch elements
 import math
 from os import path
+
 # Third party imports
 from skyfield import VERSION
 from skyfield.api import Topos, Star, load
@@ -31,12 +32,16 @@ from skyfield.nutationlib import iau2000b
 from skyfield.data import hipparcos
 ###from skyfield.units import Distance
 ###from skyfield.units import Angle
+
 # Local application imports
 import config
 
 #----------------------
 #   initialization
 #----------------------
+
+hour_of_day = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+degree_sign= u'\N{DEGREE SIGN}'
 
 def compareVersion(versions1, version2):
     #versions1 = [int(v) for v in version1.split(".")]
@@ -50,38 +55,41 @@ def compareVersion(versions1, version2):
             return -1
     return 0
 
-if config.useIERS:
-    if compareVersion(VERSION, "1.31") >= 0:
-        if path.isfile('finals2000A.all'):
-            if load.days_old('finals2000A.all') > float(config.ageIERS):
-                load.download('finals2000A.all')
-            ts = load.timescale(builtin=False)	# timescale object
+def init_sf():
+    global ts, eph, earth, moon, sun, venus, mars, jupiter, saturn, df
+    EOPdf  = "finals2000A.all"  # Earth Orientation Parameters data file
+    dfIERS = EOPdf
+
+    if config.useIERS:
+        if compareVersion(VERSION, "1.31") >= 0:
+            if path.isfile(dfIERS):
+                if load.days_old(EOPdf) > float(config.ageIERS):
+                    load.download(EOPdf)
+                ts = load.timescale(builtin=False)	# timescale object
+            else:
+                load.download(EOPdf)
+                ts = load.timescale(builtin=False)	# timescale object
         else:
-            load.download('finals2000A.all')
-            ts = load.timescale(builtin=False)	# timescale object
+            ts = load.timescale()	# timescale object with built-in UT1-tables
     else:
         ts = load.timescale()	# timescale object with built-in UT1-tables
-else:
-    ts = load.timescale()	# timescale object with built-in UT1-tables
 
-#hipparcos_epoch = ts.tt(1991.25)
-if config.ephndx in set([0, 1, 2]):
-    eph = load(config.ephemeris[config.ephndx][0])	# load chosen ephemeris
-    earth   = eph['earth']
-    moon    = eph['moon']
-    sun     = eph['sun']
-    venus   = eph['venus']
-    mars    = eph['mars']
-    jupiter = eph['jupiter barycenter']
-    saturn  = eph['saturn barycenter']
-degree_sign= u'\N{DEGREE SIGN}'
-hour_of_day = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+    if config.ephndx in set([0, 1, 2]):
+    
+        eph = load(config.ephemeris[config.ephndx][0])	# load chosen ephemeris
+        earth   = eph['earth']
+        moon    = eph['moon']
+        sun     = eph['sun']
+        venus   = eph['venus']
+        mars    = eph['mars']
+        jupiter = eph['jupiter barycenter']
+        saturn  = eph['saturn barycenter']
 
-# load the Hipparcos catalog as a 118,218 row Pandas dataframe.
-with load.open(hipparcos.URL) as f:
-    df = hipparcos.load_dataframe(f)
+    # load the Hipparcos catalog as a 118,218 row Pandas dataframe.
+    with load.open(hipparcos.URL) as f:
+        #hipparcos_epoch = ts.tt(1991.25)
+        df = hipparcos.load_dataframe(f)
 
-def init_sf():
     return ts
 
 #----------------------
@@ -161,18 +169,18 @@ def rise_set(t, y, lats):
         if y[0] and not(y[1]):
             ##rise = t0.utc_iso()[11:16]  # good for UTC only
             ##sett = t1.utc_iso()[11:16]  # good for UTC only
-            finalstate = False
             # get the UT1 hours and rounded minutes ...
             rise = t0.ut1_strftime('%H:%M')
             sett = t1.ut1_strftime('%H:%M')
+            finalstate = False
         else:
             if not(y[0]) and y[1]:
                 ##sett = t0.utc_iso()[11:16]  # good for UTC only
                 ##rise = t1.utc_iso()[11:16]  # good for UTC only
-                finalstate = True
                 # get the UT1 hours and rounded minutes ...
                 sett = t0.ut1_strftime('%H:%M')
                 rise = t1.ut1_strftime('%H:%M')
+                finalstate = True
             else:
                 # this should never get here!
                 rise_set_error(y,lats,ts.utc(t[0].utc_datetime()))
@@ -183,14 +191,14 @@ def rise_set(t, y, lats):
             t0 = ts.ut1(dt0.year, dt0.month, dt0.day, dt0.hour, dt0.minute, sec0)
             if y[0]:
                 ##rise = t0.utc_iso()[11:16]  # good for UTC only
-                finalstate = True
                 # get the UT1 hours and rounded minutes ...
                 rise = t0.ut1_strftime('%H:%M')
+                finalstate = True
             else:
                 ##sett = t0.utc_iso()[11:16]  # good for UTC only
-                finalstate = False
                 # get the UT1 hours and rounded minutes ...
                 sett = t0.ut1_strftime('%H:%M')
+                finalstate = False
         else:
             if len(t) == 3:		# this happens rarely (in high latitudes in summer)
                 dt0 = t[0].utc_datetime()
@@ -206,21 +214,21 @@ def rise_set(t, y, lats):
                     ##rise = t0.utc_iso()[11:16]  # good for UTC only
                     ##sett = t1.utc_iso()[11:16]  # good for UTC only
                     ##ris2 = t2.utc_iso()[11:16]  # good for UTC only
-                    finalstate = True
                     # get the UT1 hours and rounded minutes ...
                     rise = t0.ut1_strftime('%H:%M')
                     sett = t1.ut1_strftime('%H:%M')
                     ris2 = t2.ut1_strftime('%H:%M')
+                    finalstate = True
                 else:
                     if not(y[0]) and y[1] and not(y[2]):
                         ##sett = t0.utc_iso()[11:16]  # good for UTC only
                         ##rise = t1.utc_iso()[11:16]  # good for UTC only
                         ##set2 = t2.utc_iso()[11:16]  # good for UTC only
-                        finalstate = False
                         # get the UT1 hours and rounded minutes ...
                         sett = t0.ut1_strftime('%H:%M')
                         rise = t1.ut1_strftime('%H:%M')
                         set2 = t2.ut1_strftime('%H:%M')
+                        finalstate = False
                     else:
                         # this should never get here!
                         rise_set_error(y,lats,ts.utc(t[0].utc_datetime()))
@@ -232,26 +240,33 @@ def rise_set(t, y, lats):
     return rise, sett, ris2, set2, finalstate
 
 def rise_set_error(y, lats, t0):
+    # unexpected rise/set values - format message line
+    msg = "rise_set {} values for {}: {}".format(len(y),lats, y[0])
+    if len(y) > 1:
+        msg = msg + " {}".format(y[1])
+    if len(y) > 2:
+        msg = msg + " {}".format(y[2])
+    if len(y) > 3:
+        msg = msg + " {}".format(y[3])
+    dt = t0.utc_datetime() + datetime.timedelta(seconds = t0.dut1)
+
     if config.logfileopen:
-        # unexpected rise/set values - write to log file
-        config.writeLOG("\n\nrise_set {} values for {}: {} {} ".format(len(y),lats,y[0],y[1]))
-        if len(y) > 2:
-            config.writeLOG("{}".format(y[2]))
-        if len(y) > 3:
-            config.writeLOG("{}".format(y[3]))
-        dt = t0.utc_datetime() + datetime.timedelta(seconds = t0.dut1)
+        # write to log file
         config.writeLOG("\n{}".format(dt.isoformat()))
+        config.writeLOG("   " + msg)
     else:
-        # unexpected rise/set values - print to console
-        msg = "rise_set {} values for {}: {} {}".format(len(y),lats, y[0], y[1])
-        print(str(msg),end=' ')
-        if len(y) > 2:
-            print("{}".format(y[2]))
-        if len(y) > 3:
-            print("{}".format(y[3]))
-        dt = t0.utc_datetime() + datetime.timedelta(seconds = t0.dut1)
-        print("{}".format(dt.isoformat()))
+        # print to console
+        print("{}   {}".format(dt.isoformat(), msg))
     return
+
+#-------------------------------
+#   Miscellaneous
+#-------------------------------
+
+def getParams(d):
+    # obtain calculation parameters
+    t = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
+    return t.dut1, t.delta_t
 
 #-------------------------------
 #   Sun and Moon calculations
