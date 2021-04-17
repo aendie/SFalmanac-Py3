@@ -150,7 +150,13 @@ def fmtdeg(deg, fixedwidth=1):
             gm = "{}{}$^\circ${:04.1f}".format(theminus,di,mf)
     return gm
 
-def rise_set(t, y, lats):
+def time2text(t, round2seconds):
+    if round2seconds:
+        return t.ut1_strftime('%H:%M:%S')
+    else:
+        return t.ut1_strftime('%H:%M')
+
+def rise_set(t, y, lats, round2seconds = False):
     # analyse the return values from the 'find_discrete' method...
     # get sun/moon rise/set values (if any) rounded to nearest minute
     rise = '--:--'
@@ -167,19 +173,15 @@ def rise_set(t, y, lats):
         sec1 = dt1.second + int(dt1.microsecond)/1000000.
         t1 = ts.ut1(dt1.year, dt1.month, dt1.day, dt1.hour, dt1.minute, sec1)
         if y[0] and not(y[1]):
-            ##rise = t0.utc_iso()[11:16]  # good for UTC only
-            ##sett = t1.utc_iso()[11:16]  # good for UTC only
-            # get the UT1 hours and rounded minutes ...
-            rise = t0.ut1_strftime('%H:%M')
-            sett = t1.ut1_strftime('%H:%M')
+            # get the UT1 time rounded to minutes OR seconds ...
+            rise = time2text(t0, round2seconds)
+            sett = time2text(t1, round2seconds)
             finalstate = False
         else:
             if not(y[0]) and y[1]:
-                ##sett = t0.utc_iso()[11:16]  # good for UTC only
-                ##rise = t1.utc_iso()[11:16]  # good for UTC only
-                # get the UT1 hours and rounded minutes ...
-                sett = t0.ut1_strftime('%H:%M')
-                rise = t1.ut1_strftime('%H:%M')
+                # get the UT1 time rounded to minutes OR seconds ...
+                sett = time2text(t0, round2seconds)
+                rise = time2text(t1, round2seconds)
                 finalstate = True
             else:
                 # this should never get here!
@@ -190,17 +192,15 @@ def rise_set(t, y, lats):
             sec0 = dt0.second + int(dt0.microsecond)/1000000.
             t0 = ts.ut1(dt0.year, dt0.month, dt0.day, dt0.hour, dt0.minute, sec0)
             if y[0]:
-                ##rise = t0.utc_iso()[11:16]  # good for UTC only
-                # get the UT1 hours and rounded minutes ...
-                rise = t0.ut1_strftime('%H:%M')
+                # get the UT1 time rounded to minutes OR seconds ...
+                rise = time2text(t0, round2seconds)
                 finalstate = True
             else:
-                ##sett = t0.utc_iso()[11:16]  # good for UTC only
-                # get the UT1 hours and rounded minutes ...
-                sett = t0.ut1_strftime('%H:%M')
+                # get the UT1 time rounded to minutes OR seconds ...
+                sett = time2text(t0, round2seconds)
                 finalstate = False
         else:
-            if len(t) == 3:		# this happens rarely (in high latitudes in summer)
+            if len(t) == 3:		# this happens rarely (in high latitudes mid-year)
                 dt0 = t[0].utc_datetime()
                 sec0 = dt0.second + int(dt0.microsecond)/1000000.
                 t0 = ts.ut1(dt0.year, dt0.month, dt0.day, dt0.hour, dt0.minute, sec0)
@@ -211,23 +211,17 @@ def rise_set(t, y, lats):
                 sec2 = dt2.second + int(dt2.microsecond)/1000000.
                 t2 = ts.ut1(dt2.year, dt2.month, dt2.day, dt2.hour, dt2.minute, sec2)
                 if y[0] and not(y[1]) and y[2]:
-                    ##rise = t0.utc_iso()[11:16]  # good for UTC only
-                    ##sett = t1.utc_iso()[11:16]  # good for UTC only
-                    ##ris2 = t2.utc_iso()[11:16]  # good for UTC only
-                    # get the UT1 hours and rounded minutes ...
-                    rise = t0.ut1_strftime('%H:%M')
-                    sett = t1.ut1_strftime('%H:%M')
-                    ris2 = t2.ut1_strftime('%H:%M')
+                    # get the UT1 time rounded to minutes OR seconds ...
+                    rise = time2text(t0, round2seconds)
+                    sett = time2text(t1, round2seconds)
+                    ris2 = time2text(t2, round2seconds)
                     finalstate = True
                 else:
                     if not(y[0]) and y[1] and not(y[2]):
-                        ##sett = t0.utc_iso()[11:16]  # good for UTC only
-                        ##rise = t1.utc_iso()[11:16]  # good for UTC only
-                        ##set2 = t2.utc_iso()[11:16]  # good for UTC only
-                        # get the UT1 hours and rounded minutes ...
-                        sett = t0.ut1_strftime('%H:%M')
-                        rise = t1.ut1_strftime('%H:%M')
-                        set2 = t2.ut1_strftime('%H:%M')
+                        # get the UT1 time rounded to minutes OR seconds ...
+                        sett = time2text(t0, round2seconds)
+                        rise = time2text(t1, round2seconds)
+                        set2 = time2text(t2, round2seconds)
                         finalstate = False
                     else:
                         # this should never get here!
@@ -322,7 +316,7 @@ def moonSD(d):              # used in sunmoontab(m)
     sdmm = "{:0.1f}".format(sdm * 60)  # convert to minutes of arc
     return sdmm
 
-def moonGHA(d):             # used in sunmoontab(m)
+def moonGHA(d, round2seconds = False):  # used in sunmoontab(m) & equationtab
     # compute moon's GHA, DEC and HP per hour of day
     t = ts.ut1(d.year, d.month, d.day, hour_of_day, 0, 0)
     position = earth.at(t).observe(moon)
@@ -330,12 +324,18 @@ def moonGHA(d):             # used in sunmoontab(m)
     dec = position.apparent().radec(epoch='date')[1]
     distance = position.apparent().radec(epoch='date')[2]
 
-    # also compute moon's GHA at End of Day (23:59:30) and Start of Day (24 hours earlier)
-    tSoD = ts.ut1(d.year, d.month, d.day-1, 23, 59, 30)
+    if round2seconds:
+        # also compute moon's GHA at End of Day (23:59:59.5) and Start of Day (24 hours earlier)
+        tSoD = ts.ut1(d.year, d.month, d.day-1, 23, 59, 59.5)
+        tEoD = ts.ut1(d.year, d.month, d.day, 23, 59, 59.5)
+    else:   # round to minutes of time
+        # also compute moon's GHA at End of Day (23:59:30) and Start of Day (24 hours earlier)
+        tSoD = ts.ut1(d.year, d.month, d.day-1, 23, 59, 30)
+        tEoD = ts.ut1(d.year, d.month, d.day, 23, 59, 30)
+
     posSoD = earth.at(tSoD).observe(moon)
     raSoD = posSoD.apparent().radec(epoch='date')[0]
     ghaSoD = gha2deg(tSoD.gast, raSoD.hours)   # GHA as float
-    tEoD = ts.ut1(d.year, d.month, d.day, 23, 59, 30)
     posEoD = earth.at(tEoD).observe(moon)
     raEoD = posEoD.apparent().radec(epoch='date')[0]
     ghaEoD = gha2deg(tEoD.gast, raEoD.hours)   # GHA as float
@@ -346,6 +346,7 @@ def moonGHA(d):             # used in sunmoontab(m)
     decm = ['' for x in range(24)]
     degm = ['' for x in range(24)]
     HPm  = ['' for x in range(24)]
+
     for i in range(len(dec.degrees)):
 ##        raIDL = ra.hours[i] + 12	# at International Date Line
 ##        if raIDL > 24: raIDL = raIDL - 24
@@ -357,9 +358,11 @@ def moonGHA(d):             # used in sunmoontab(m)
         dist_km = distance.km[i]
         HP = math.degrees(math.atan(6378.0/dist_km))	# radius of earth = 6378.0 km
         HPm[i] = "{:0.1f}'".format(HP * 60)     # convert to minutes of arc
+
     # degm has been added for the sunmoontab function
     # GHAupper is an array of GHA per hour as float
-    # ghaSoD, ghaEoD = GHA at Start/End of Day assuming time is rounded to hh:mm
+    # ghaSoD, ghaEoD = GHA at Start/End of Day as time is rounded to hh:mm (or hh:mm:ss)
+
     return gham, decm, degm, HPm, GHAupper, GHAlower, ghaSoD, ghaEoD
 
 def moonVD(d0,d):           # used in sunmoontab(m)
@@ -577,7 +580,7 @@ def ariestransit(d):        # used in planetstab(m)
     time = '{:02d}:{:02d}'.format(hr,min)
     return time
     
-def planetstransit(d):      # used in starstab
+def planetstransit(d, round2seconds = False):      # used in starstab & meridiantab
     # returns SHA and Meridian Passage for the navigational planets
     d1 = d + datetime.timedelta(days=1)
     
@@ -598,7 +601,7 @@ def planetstransit(d):      # used in starstab
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(venus))
     #if len(transit_time) != 1:
     #    print('returned %s values' %len(transit_time))
-    vtrans = rise_set(transit_time,y,u'Venus   0{} E transit'.format(degree_sign))[0]
+    vtrans = rise_set(transit_time,y,u'Venus   0{} E transit'.format(degree_sign),round2seconds)[0]
 
 # Mars
     position0 = earth.at(t0).observe(mars)
@@ -613,7 +616,7 @@ def planetstransit(d):      # used in starstab
     position = earth.at(tfr).observe(mars)
     ra = position.apparent().radec(epoch='date')[0]
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(mars))
-    marstrans = rise_set(transit_time,y,u'Mars    0{} E transit'.format(degree_sign))[0]
+    marstrans = rise_set(transit_time,y,u'Mars    0{} E transit'.format(degree_sign),round2seconds)[0]
 
 # Jupiter
     position0 = earth.at(t0).observe(jupiter)
@@ -626,7 +629,7 @@ def planetstransit(d):      # used in starstab
     position = earth.at(tfr).observe(jupiter)
     ra = position.apparent().radec(epoch='date')[0]
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(jupiter))
-    jtrans = rise_set(transit_time,y,u'Jupiter 0{} E transit'.format(degree_sign))[0]
+    jtrans = rise_set(transit_time,y,u'Jupiter 0{} E transit'.format(degree_sign),round2seconds)[0]
     
 # Saturn
     position0 = earth.at(t0).observe(saturn)
@@ -639,7 +642,7 @@ def planetstransit(d):      # used in starstab
     position = earth.at(tfr).observe(saturn)
     ra = position.apparent().radec(epoch='date')[0]
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(saturn))
-    sattrans = rise_set(transit_time,y,u'Saturn  0{} E transit'.format(degree_sign))[0]
+    sattrans = rise_set(transit_time,y,u'Saturn  0{} E transit'.format(degree_sign),round2seconds)[0]
     
     return [vsha,vtrans,marssha,marstrans,jsha,jtrans,satsha,sattrans,hpmars,hpvenus]
 
@@ -752,7 +755,7 @@ Markab,113963
 #   TWILIGHT table
 #--------------------
 
-def twilight(d, lat, hemisph):  # used in twilighttab (section 1)
+def twilight(d, lat, hemisph, round2seconds = False):  # used in twilighttab (section 1)
     # Returns for given date and latitude(in full degrees):
     # naut. and civil twilight (before sunrise), sunrise, meridian passage, sunset, civil and nautical twilight (after sunset).
     # NOTE: 'twilight' is only called for every third day in the Full Almanac...
@@ -762,8 +765,13 @@ def twilight(d, lat, hemisph):  # used in twilighttab (section 1)
     lats = "{:3.1f} {}".format(abs(lat), hemisph)
     locn = Topos(lats, "0.0 E")
     dt = datetime.datetime(d.year, d.month, d.day, 0, 0, 0)
-    dt -= datetime.timedelta(seconds=30)       # search from 30 seconds before midnight
-    t0 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
+
+    if round2seconds:
+        dt -= datetime.timedelta(seconds=0.5)      # search from 0.5 seconds before midnight
+    else:
+        dt -= datetime.timedelta(seconds=30)       # search from 30 seconds before midnight
+
+    t0 = ts.ut1(dt.year, dt.month, dt.day,   dt.hour, dt.minute, dt.second)
     t1 = ts.ut1(dt.year, dt.month, dt.day+1, dt.hour, dt.minute, dt.second)
 
     # Nautical Twilight...
@@ -771,7 +779,7 @@ def twilight(d, lat, hemisph):  # used in twilighttab (section 1)
     naut, y = almanac.find_discrete(t0, t1, daylength(locn, 12.0))
     stop00 = time.time()                    # 00000
     config.stopwatch += stop00-start00      # 00000
-    out[0], out[5], r2, s2, fs = rise_set(naut,y,lats)
+    out[0], out[5], r2, s2, fs = rise_set(naut,y,lats,round2seconds)
     if out[0] == '--:--' and out[5] == '--:--':	# if neither begin nor end...
         yn = midnightsun(d, hemisph)
         out[0] = yn
@@ -782,7 +790,7 @@ def twilight(d, lat, hemisph):  # used in twilighttab (section 1)
     civil, y = almanac.find_discrete(t0, t1, daylength(locn, 6.0))
     stop00 = time.time()                    # 00000
     config.stopwatch += stop00-start00      # 00000
-    out[1], out[4], r2, s2, fs = rise_set(civil,y,lats)
+    out[1], out[4], r2, s2, fs = rise_set(civil,y,lats,round2seconds)
     if out[1] == '--:--' and out[4] == '--:--':	# if neither begin nor end...
         yn = midnightsun(d, hemisph)
         out[1] = yn
@@ -793,7 +801,7 @@ def twilight(d, lat, hemisph):  # used in twilighttab (section 1)
     actual, y = almanac.find_discrete(t0, t1, daylength(locn, 0.8333))
     stop00 = time.time()                    # 00000
     config.stopwatch += stop00-start00      # 00000
-    out[2], out[3], r2, s2, fs = rise_set(actual,y,lats)
+    out[2], out[3], r2, s2, fs = rise_set(actual,y,lats,round2seconds)
     if out[2] == '--:--' and out[3] == '--:--':	# if neither sunrise nor sunset...
         yn = midnightsun(d, hemisph)
         out[2] = yn
@@ -899,10 +907,21 @@ def moonrise_set(d, lat, hemisph):  # used in twilighttab (section 2)
     t1 = ts.ut1(dt.year, dt.month, dt.day+1, dt.hour, dt.minute, dt.second)
     t2 = ts.ut1(dt.year, dt.month, dt.day+2, dt.hour, dt.minute, dt.second)
     t3 = ts.ut1(dt.year, dt.month, dt.day+3, dt.hour, dt.minute, dt.second)
-    #horizon = math.atan(1738.1/384402.0) + 0.5667	# moon's angular radius + 34'(atmospheric refraction)
-    horizon = 0.8333
+    t0noon = ts.ut1(dt.year, dt.month, dt.day, dt.hour+12, dt.minute, dt.second)
+    t1noon = ts.ut1(dt.year, dt.month, dt.day+1, dt.hour+12, dt.minute, dt.second)
+    t2noon = ts.ut1(dt.year, dt.month, dt.day+2, dt.hour+12, dt.minute, dt.second)
+
+    #horizon = 0.8333333        # 16' (semi-diameter) + 34' (atmospheric refraction)
 #-----------------------------------------------------------
     # Moonrise/Moonset on 1st. day ...
+
+    # first compute semi-diameter of moon (in degrees)
+    position = earth.at(t0noon).observe(moon)   # at noontime (for daily average distance)
+    distance = position.apparent().radec(epoch='date')[2]
+    dist_km = distance.km
+    sdm = math.degrees(math.atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+    horizon = sdm + 0.5666667	# moon's equatorial radius + 34' (atmospheric refraction)
+
     start00 = time.time()                   # 00000
     moonrise, y = almanac.find_discrete(t0, t1, moonday(locn, horizon))
     stop00 = time.time()                    # 00000
@@ -918,6 +937,14 @@ def moonrise_set(d, lat, hemisph):  # used in twilighttab (section 2)
         out[3] = moonstate(i)
 #-----------------------------------------------------------
     # Moonrise/Moonset on 2nd. day ...
+
+    # first compute semi-diameter of moon (in degrees)
+    position = earth.at(t1noon).observe(moon)   # at noontime (for daily average distance)
+    distance = position.apparent().radec(epoch='date')[2]
+    dist_km = distance.km
+    sdm = math.degrees(math.atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+    horizon = sdm + 0.5666667	# moon's equatorial radius + 34' (atmospheric refraction)
+
     start00 = time.time()                   # 00000
     moonrise, y = almanac.find_discrete(t1, t2, moonday(locn, horizon))
     stop00 = time.time()                    # 00000
@@ -933,6 +960,14 @@ def moonrise_set(d, lat, hemisph):  # used in twilighttab (section 2)
         out[4] = moonstate(i)
 #-----------------------------------------------------------
     # Moonrise/Moonset on 3rd. day ...
+
+    # first compute semi-diameter of moon (in degrees)
+    position = earth.at(t2noon).observe(moon)   # at noontime (for daily average distance)
+    distance = position.apparent().radec(epoch='date')[2]
+    dist_km = distance.km
+    sdm = math.degrees(math.atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+    horizon = sdm + 0.5666667	# moon's equatorial radius + 34' (atmospheric refraction)
+
     start00 = time.time()                   # 00000
     moonrise, y = almanac.find_discrete(t2, t3, moonday(locn, horizon))
     stop00 = time.time()                    # 00000
@@ -946,6 +981,50 @@ def moonrise_set(d, lat, hemisph):  # used in twilighttab (section 2)
             getmoonstate(dt+datetime.timedelta(days=2), lat, hemisph)    # ...get moon state if unknown
         out[2] = moonstate(i)
         out[5] = moonstate(i)
+
+    return out, out2
+
+def moonrise_set2(d, lat, hemisph):  # used in twilighttab of eventtables.py
+    # returns moonrise and moonset for the given date and latitude:
+    #    rise time, set time
+    # Additionally it also tracks the current state of the moon (above or below horizon)
+
+    i = config.lat.index(lat)
+    out  = ['--:--','--:--']	# first event
+    out2 = ['--:--','--:--']	# second event on same day (rare)
+
+    lats = "{:3.1f} {}".format(abs(lat), hemisph)
+    locn = Topos(lats, "0.0 E")
+    dt = datetime.datetime(d.year, d.month, d.day, 0, 0, 0)
+    dt -= datetime.timedelta(seconds=0.5)   # search from 0.5 seconds before midnight
+    t0 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
+    t1 = ts.ut1(dt.year, dt.month, dt.day+1, dt.hour, dt.minute, dt.second)
+    t0noon = ts.ut1(dt.year, dt.month, dt.day, dt.hour+12, dt.minute, dt.second)
+
+    #horizon = 0.8333           # 16' (semi-diameter) + 34' (atmospheric refraction)
+#-----------------------------------------------------------
+    # Moonrise/Moonset on the selected day ...
+
+    # first compute semi-diameter of moon (in degrees)
+    position = earth.at(t0noon).observe(moon)   # at noontime (for daily average distance)
+    distance = position.apparent().radec(epoch='date')[2]
+    dist_km = distance.km
+    sdm = math.degrees(math.atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+    horizon = sdm + 0.5666667	# moon's equatorial radius + 34' (atmospheric refraction)
+
+    start00 = time.time()                   # 00000
+    moonrise, y = almanac.find_discrete(t0, t1, moonday(locn, horizon))
+    stop00 = time.time()                    # 00000
+    config.stopwatch += stop00-start00      # 00000
+    out[0], out[1], out2[0], out2[1], fs = rise_set(moonrise,y,lats,True)
+    if fs != None:
+        moonvisible[i] = fs
+
+    if out[0] == '--:--' and out[1] == '--:--':	# if neither moonrise nor moonset...
+        if moonvisible[i] == None:
+            getmoonstate(dt, lat, hemisph)			# ...get moon state if unknown
+        out[0] = moonstate(i)
+        out[1] = moonstate(i)
 
     return out, out2
 
@@ -1014,14 +1093,29 @@ def getmoonstate(dt, lat, hemisph):
 #------------------------------
 
 def getGHA(d, hh, mm, ss):
-    # calculate the Moon's GHA on date d at hh:mm:ss
+    # calculate the Moon's GHA on date d at hh:mm:ss (ss can be a float)
     t1 = ts.ut1(d.year, d.month, d.day, hh, mm, ss)
     pos = earth.at(t1).observe(moon)
     ra = pos.apparent().radec(epoch='date')[0]
     gha = gha2deg(t1.gast, ra.hours)
     return gha      # GHA as float (degrees)
 
+def roundup(hr, mi):
+    # round time up to next minute. Both arguments are integers and all times are within one day.
+    # Times (for calculation) between 23:59:30 and 00:00:00 are rounded up to 00:00 ... no 
+    # date adjustment is necessary as the calculated time came on purpose from the day before.
+
+    mi += 1         # round minutes up
+    if(mi == 60):
+        mi = 0
+        hr += 1     # round hours up
+    if(hr == 24):
+        hr = 0
+    return hr, mi
+
 def find_transit(d, ghaList, modeLT):
+    # Determine the Transit Event Time rounded to the nearest minute.
+
     # ghaList contains the 'hourly' GHA values on day 'd' for the times:
     #  23:59:30 on d-1; 01:00; 02:00; 03:00 ... 21:00; 22:00; 23:00; 23:59:30
     # Events between 23:59:30 on d-1 and 23:59:30 will show as 00:00 to 23:59
@@ -1029,18 +1123,22 @@ def find_transit(d, ghaList, modeLT):
     # This effectively filters out events after 30 seconds before midnight
     #  as these belong to the next day once rounded up to 00:00.
     # Furthermore those from the last 30 seconds of the previous day
-    #  will be automatically included.
-    # In the latter case one cannot compare which GHA is closer to zero
-    #  ... the GHA at 00:00:30 must be inspected.
+    #  will be automatically included (as 00:00).
 
-    # this method may also be used to determine the Lower transit by replacing
+    # This method may also be used to determine the Lower transit by replacing
     #  GHA with the colongitude GHA (and an adapted ghaList). Thus...
     # modeLT = False means find Upper Transit; = True means find Lower Transit
     
     # This OPTIMIZED version does not calculate every minute from 0 to 59 until
-    # it detects a transit event. The search begins from 'min_start'.
+    # it detects a transit event. The minutes search begins from 'min_start'
+    # and is so chosen that 2 or 3 values before the event are searched (with the
+    # exception when the search begins from zero minutes, where the event might
+    # follow immediately).
 
-    hr = -1             # an invalid hour value
+    # If the transit event is very close to the mid-point between minutes, one cannot
+    # reliably estimate to round up or down without inspecting the mid-point GHA value.
+
+    hr = -1                 # an invalid hour value
     transit_time = '--:--'  # assume 'no event'
     prev_gha = 0
     prev_time = '--:--'
@@ -1051,74 +1149,205 @@ def find_transit(d, ghaList, modeLT):
     gha = ghaList[0]    # GHA at 23:59:30 on d-1
     gha_top = 360       # min_start defaults to 0
 
+    # find the hour after which the transit event occurs
     for i in range(24): # 0 to 23
         if(ghaList[i+1] < gha):
             hr = i      # event is between hr:00 and {hr+1}:00
             gha_top = ghaList[i]
             break
-        gha = ghaList[i+1]  # GHA at {hr+1}:00
-    min_start = int((360-gha_top)/0.245)-1
-    if(min_start < 0):
-        min_start = 0
+        gha = ghaList[i+1]  # test GHA at {hr+1}:00
+    # estimate where to begin searching by the minute
+    min_start = max(0, int((360-gha_top)/0.25)-1)
 
-    if hr >= 0:         # if event found... locate it more precisely
-        prev_gha = ghaList[i]    # GHA before the event (typically on the hour)
-        prev_time = "{:02d}:{:02d}".format(hr,0)
-        for min in range(min_start,60):       # 0 to 59 max
-            gha = getGHA(d, hr, min+1, 0)   # GHA on the minute after the event
-            gha_time = "{:02d}:{:02d}".format(hr,min+1)
-            if(modeLT):
-                gha = GHAcolong(gha)
-            if(gha < prev_gha):
-                break       # break when event detected ('min' is after event)
-            prev_gha = gha   # GHA on the minute before the event
-            prev_time = "{:02d}:{:02d}".format(hr,min+1)
+    if hr< 0:
+        return transit_time     # no event detected this day
 
-        mid_time = '-'      # no value
-        diff = prev_gha - 360 + gha      # if negative, round time up
+    # if event found... locate it more precisely (to the minute)
+    iLoops = 0
+    prev_gha = ghaList[i]    # GHA before the event (typically on the hour)
+    prev_time = "{:02d}:{:02d}".format(hr,0)
+    for mi in range(min_start,60):       # 0 to 59 max
+        gha = getGHA(d, hr, mi+1, 0)   # GHA on the minute after the event
+        gha_time = "{:02d}:{:02d}".format(hr,mi+1)
+        if(modeLT):
+            gha = GHAcolong(gha)
+        if(gha < prev_gha):
+            if(iLoops == 0 and mi > 0): raise ValueError('ERROR: min_start too large')
+            break       # break when event detected ('hr:mi' is before the event)
+        prev_gha = gha  # GHA on the minute before the event
+        prev_time = "{:02d}:{:02d}".format(hr,mi+1)
+        iLoops += 1
 
-        if(hr == 23 and min == 59):
-            pass            # events between 23:59 and 23:59:30 never round up to 00:00
-        elif(hr == 0 and min == 0):
-            mid_gha = getGHA(d, hr, min, 30)
-            mid_time = "{:02d}:{:02d}:{:02d}".format(hr,min,30)
-            if(modeLT):
-                mid_gha = GHAcolong(mid_gha)
-            if(mid_gha > 180):
-                min += 1        # midway is before the event (round up)
-                if(min == 60):
-                    min = 0
-                    hr += 1
-        elif(abs(diff) < 0.002):
-            # midpoint too close to zero: to round up or down it's better
-            #    to check the gha 30 sec earlier (midway between minutes)
-            # (The GHA changes by 0.002 in about 0.5 seconds time)
-            mid_gha = getGHA(d, hr, min, 30)
-            mid_time = "{:02d}:{:02d}:{:02d}".format(hr,min,30)
-            if(modeLT):
-                mid_gha = GHAcolong(mid_gha)
-            if(mid_gha > 180):
-                min += 1        # midway is before the event (round up)
-                if(min == 60):
-                    min = 0
-                    hr += 1
-        elif(diff < 0):
-            # just compare which gha is closer to zero GHA and round accordingly
-            min += 1            # closer to following GHA (round up)
-            if(min == 60):
-                min = 0
-                hr += 1
+    mid_time = '-'      # no value yet for mid-way between minutes
+    diff = prev_gha - 360 + gha      # if negative, round time up
 
-        transit_time = "{:02d}:{:02d}".format(hr,min)
-    #    if(modeLT):
-    #        prev_gha = GHAcolong(prev_gha)
-    #        gha = GHAcolong(gha)
-    #        mid_gha = GHAcolong(mid_gha)
-    #return transit_time, prev_gha, prev_time, gha, gha_time, mid_gha, mid_time
+    if(hr == 23 and mi == 59):
+        pass            # events between 23:59 and 23:59:30 never round up to 00:00 next day
 
+    elif(hr == 0 and mi == 0):
+        mid_gha = getGHA(d, hr, mi, 30)
+        mid_time = "{:02d}:{:02d}:{:02d}".format(hr,mi,30)
+        if(modeLT):
+            mid_gha = GHAcolong(mid_gha)
+        if(mid_gha > 180):
+            hr, mi = roundup(hr, mi)   # midway is before the event (round minutes up)
+
+    elif(abs(diff) < 0.002):
+        # midpoint too close to the transit event to estimate round up or down.
+        #    Check the GHA 30 sec later (midway between minutes).
+        # (The GHA changes by 0.002 in about 0.5 seconds time)
+        mid_gha = getGHA(d, hr, mi, 30)
+        mid_time = "{:02d}:{:02d}:{:02d}".format(hr,mi,30)
+        if(modeLT):
+            mid_gha = GHAcolong(mid_gha)
+        if(mid_gha > 180):
+            hr, mi = roundup(hr, mi)   # midway is before the event (round minutes up)
+
+    elif(diff < 0):
+        # just compare which GHA is closer to zero GHA and round accordingly
+        hr, mi = roundup(hr, mi)   # midway is before the event (round minutes up)
+
+    transit_time = "{:02d}:{:02d}".format(hr,mi)
     return transit_time
 
-##NEW##
+####    if(modeLT):
+####        prev_gha = GHAcolong(prev_gha)
+####        gha = GHAcolong(gha)
+####        mid_gha = GHAcolong(mid_gha)
+####    return transit_time, prev_gha, prev_time, gha, gha_time, mid_gha, mid_time
+
+
+def roundup2(hr, mi, se):
+    # round time up to next second. All arguments are integers and all times are within one day.
+    # Times (for calculation) between 23:59:59.5 and 00:00:00 are rounded up to 00:00:00 ... no 
+    # date adjustment is necessary as the calculated time came on purpose from the day before.
+
+    se += 1         # round seconds up
+    if(se == 60):
+        se = 0
+        mi += 1     # round minutes up
+    if(mi == 60):
+        mi = 0
+        hr += 1     # round hours up
+    if(hr == 24):
+        hr = 0
+    return hr, mi, se
+
+def find_transit2(d, ghaList, modeLT):
+    # Determine the Transit Event Time rounded to the nearest second.
+
+    # ghaList contains the 'hourly' GHA values on day 'd' for the times:
+    #  23:59:59.5 on d-1; 01:00; 02:00; 03:00 ... 21:00; 22:00; 23:00; 23:59:59.5
+    # Events between 23:59:59.5 on d-1 and 23:59:59.5 will show as 00:00:00 to 23:59:59
+
+    # This effectively filters out events after 0.5 seconds before midnight
+    #  as these belong to the next day once rounded up to 00:00:00.
+    # Furthermore those from the last 0.5 seconds of the previous day
+    #  will be automatically included (as 00:00:00).
+
+    # This method may also be used to determine the Lower transit by replacing
+    #  GHA with the colongitude GHA (and an adapted ghaList). Thus...
+    # modeLT = False means find Upper Transit; = True means find Lower Transit
+    
+    # This OPTIMIZED version does not calculate every minute from 0 to 59 
+    # and then every second from 0 to 59 until it detects a transit event. 
+    # The minutes search begins from 'min_start'; the seconds search from 'sec_start'
+    # and are so chosen that 2 or 3 values before the event are searched (with the
+    # exception when either minutes or seconds search begins from zero where the event
+    #  might follow immediately).
+
+    # If the transit event is very close to the mid-point between minutes/seconds, one
+    # cannot reliably estimate to round up or down without inspecting the mid-point GHA value.
+
+    hr = -1             # an invalid hour value
+    transit_time = '--:--'  # assume 'no event'
+    prev_gha = 0
+    prev_time = '--:--'
+    mid_gha = 0
+    mid_time = '--:--:--'
+    gha = 0
+    gha_time = '--:--'
+    gha = ghaList[0]    # GHA at 23:59:59.5 on d-1
+    gha_top = 360       # min_start defaults to 0
+
+    # find the hour after which the transit event occurs
+    for i in range(24): # 0 to 23
+        if(ghaList[i+1] < gha):
+            hr = i      # event is between hr:00:00 and {hr+1}:00:00
+            gha_top = ghaList[i]
+            break
+        gha = ghaList[i+1]  # test GHA at {hr+1}:00:00
+    # estimate where to begin searching by the minute
+    min_start = max(0, int((360-gha_top)/0.25)-1)
+
+    if hr< 0:
+        return transit_time     # no event detected this day
+
+    # if event found... locate it more precisely (to the minute)
+    iLoops = 0
+    prev_gha = ghaList[i]       # GHA before the event (typically on the hour)
+    prev_time = "{:02d}:{:02d}".format(hr,0)
+    gha = getGHA(d, hr, 0, 0)   # GHA on the minute after the event
+    for mi in range(min_start,60):      # 0 to 59 max
+        gha = getGHA(d, hr, mi+1, 0)    # GHA on the minute after the event
+        gha_time = "{:02d}:{:02d}".format(hr,mi+1)
+        if(modeLT):
+            gha = GHAcolong(gha)
+        if(gha < prev_gha):
+            if(iLoops == 0 and mi > 0): raise ValueError('ERROR: min_start too large')
+            break       # break when event detected ('hr:mi' is before the event)
+        prev_gha = gha  # GHA on the minute before the event
+        prev_time = "{:02d}:{:02d}".format(hr,mi+1)
+        iLoops += 1
+
+    # again locate it more precisely (to the second)
+    iLoops = 0
+    sec_start = max(0, int((360-prev_gha)/0.25*60.0)-1)
+    for se in range(sec_start,60):      # 0 to 59 max
+        gha = getGHA(d, hr, mi, se+1)   # GHA on the second after the event
+        gha_time = "{:02d}:{:02d}:{:02d}".format(hr,mi,se+1)
+        if(modeLT):
+            gha = GHAcolong(gha)
+        if(gha < prev_gha):
+            if(iLoops == 0 and se > 0): raise ValueError('ERROR: sec_start too large')
+            break       # break when event detected ('hr:mi:se' is before event)
+        prev_gha = gha  # GHA each second before the event
+        prev_time = "{:02d}:{:02d}:{:02d}".format(hr,mi,se+1)
+        iLoops += 1
+
+    mid_time = '-'      # no value yet for mid-way between seconds
+    diff = prev_gha - 360.0 + gha      # if negative, round time up
+
+    if(hr == 23 and mi == 59 and se == 59):
+        pass            # events between 23:59:59 and 23:59:59.5 never round up to 00:00:00 next day
+
+    elif(hr == 0 and mi == 0 and se == 0):
+        mid_gha = getGHA(d, hr, mi, se+0.5)
+        mid_time = "{:02d}:{:02d}:{:04.1f}".format(hr,mi,se+0.5)
+        if(modeLT):
+            mid_gha = GHAcolong(mid_gha)
+        if(mid_gha > 180):
+            hr, mi, se = roundup2(hr, mi, se)    # midway is before the event (round seconds up)
+
+    elif(abs(diff) < 0.001):
+        # midpoint too close to the transit event to estimate round up or down...
+        #    Check the GHA 0.5 sec later (midway between seconds).
+        # (The GHA changes by 0.002 in about 0.5 seconds time)
+        mid_gha = getGHA(d, hr, mi, se+0.5)
+        mid_time = "{:02d}:{:02d}:{:04.1f}".format(hr,mi,se+0.5)
+        if(modeLT):
+            mid_gha = GHAcolong(mid_gha)
+        if(mid_gha > 180):
+            hr, mi, se = roundup2(hr, mi, se)    # midway is before the event (round seconds up)
+
+    elif(diff < 0):
+        # just compare which GHA is closer to zero GHA and round accordingly
+        hr, mi, se = roundup2(hr, mi, se)     # closer to following GHA (round seconds up)
+
+    transit_time = "{:02d}:{:02d}:{:02d}".format(hr,mi,se)
+    return transit_time
+
+
 def moonphase(d):           # used in twilighttab (section 3)
     # returns the moon's elongation (angle to the sun)
 
@@ -1146,7 +1375,6 @@ def moonphase(d):           # used in twilighttab (section 3)
 
     return phase
 
-##NEW##
 def moonage(d, d1):         # used in twilighttab (section 3)
     # return the moon's 'age' and percent illuminated
 
@@ -1173,7 +1401,7 @@ def moonage(d, d1):         # used in twilighttab (section 3)
 
     return age,pct
 
-def equation_of_time(d, d1, UpperList, LowerList, extras):  # used in twilighttab (section 3)
+def equation_of_time(d, d1, UpperList, LowerList, extras, round2seconds = False):  # used in twilighttab (section 3)
     # returns equation of time, the sun's transit time, 
     # the moon's transit-, antitransit-time, age and percent illumination.
     # (Equation of Time = Mean solar time - Apparent solar time)
@@ -1196,17 +1424,24 @@ def equation_of_time(d, d1, UpperList, LowerList, extras):  # used in twilightta
     if gha12 > 270:
         eqt12 = r"\colorbox{{lightgray!60}}{{{}}}".format(eqt12)
 
-    # !! transit times are rounded to the nearest minute,
-    # !! so the search needs to start and end 30 sec earlier
-    # !! e.g. after 23h 59m 30s rounds up to 00:00 next day
+    if round2seconds:
+        # !! transit times are rounded to the nearest second,
+        # !! so the search needs to start and end 0.5 sec earlier
+        # !! e.g. after 23h 59m 59.5s rounds up to 00:00:00 next day
 
-    # calculate moon upper transit
+        # calculate moon upper transit
+        mp_upper = find_transit2(d, UpperList, False)
+        # calculate moon lower transit
+        mp_lower = find_transit2(d, LowerList, True)
+    else:
+        # !! transit times are rounded to the nearest minute,
+        # !! so the search needs to start and end 30 sec earlier
+        # !! e.g. after 23h 59m 30s rounds up to 00:00 next day
 
-    mp_upper = find_transit(d, UpperList, False)
-
-    # calculate moon lower transit
-
-    mp_lower = find_transit(d, LowerList, True)
+        # calculate moon upper transit
+        mp_upper = find_transit(d, UpperList, False)
+        # calculate moon lower transit
+        mp_lower = find_transit(d, LowerList, True)
 
     if not(extras):     # omit 'age' and 'pct'
         return eqt00,eqt12,mpa12,mp_upper,mp_lower
