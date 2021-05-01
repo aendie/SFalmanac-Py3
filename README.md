@@ -83,7 +83,7 @@ Regarding Moon Data: ".. .." has been added to indicate that the moonrise/moonse
 
 The additional calculations required are compensated with a transient Moon Data buffer store that always holds the latest five adjacent days of moon data, eliminating any need to recalculate data for the next or previous day (to determine if "moon above/below horizon" spans a minimum of two days.)
 
-Correction to Sun Data: "Sun continually above/below horizon" now shown if it applies to both Sunrise and Sunset, or *additionally* to both Civil Twilight Start & End; or *additionally* to both Astronomical Twilight Start & End, i.e. as two, four or six events per day and latitute. This brings it in line with Nautical Almanacs.
+Correction to Sun Data: "Sun continually above/below horizon" now shown if it applies to both Sunrise and Sunset, or *additionally* to both Civil Twilight Start & End; or *additionally* to both Astronomical Twilight Start & End, i.e. as two, four or six events per day and latitude. This brings it in line with Nautical Almanacs.
 
 ## Requirements
 
