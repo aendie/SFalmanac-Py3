@@ -308,8 +308,8 @@ def maketables(first_day, pagenum):
     # page size specific parameters
     if config.pgsz == "A4":
         paper = "a4paper"
-        vsep1 = "2.0cm"
-        vsep2 = "1.5cm"
+        vsep1 = "1.5cm"
+        vsep2 = "1.0cm"
         tm1 = "21mm"    # title page...
         bm1 = "15mm"
         lm1 = "10mm"
@@ -320,8 +320,8 @@ def maketables(first_day, pagenum):
         rm = "16mm"
     else:
         paper = "letterpaper"
-        vsep1 = "1.5cm"
-        vsep2 = "1.0cm"
+        vsep1 = "0.8cm"
+        vsep2 = "0.7cm"
         tm1 = "12mm"    # title page...
         bm1 = "15mm"
         lm1 = "12mm"
@@ -354,7 +354,7 @@ def maketables(first_day, pagenum):
 %\showboxbreadth=50  % use for logging
 %\showboxdepth=50    % use for logging
 %\DeclareUnicodeCharacter{00B0}{\ensuremath{{}^\circ}}
-\setlength\fboxsep{1.5pt}       % ONLY used by \colorbox in alma_ephem.py
+\setlength\fboxsep{1.5pt}       % ONLY used by \colorbox in alma_skyfield.py
 \begin{document}'''
 
     alm = alm + r'''

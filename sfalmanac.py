@@ -143,6 +143,10 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
 ##        config.initLOG()		# initialize log file
         for yearint in range(int(yearfr),int(yearto)+1):
             start = time.time()
+            config.moonDataSeeks = 0
+            config.moonDataFound = 0
+            config.moonHorizonSeeks = 0
+            config.moonHorizonFound = 0
             year = "{:4d}".format(yearint)  # year = "%4d" %yearint
             msg = "\nCreating the nautical almanac for the year {}".format(year)
             print(msg)
@@ -156,6 +160,14 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
             msg = "execution time = {:0.2f} seconds".format(stop-start) # msg = "execution time = %0.2f seconds" %(stop-start)
             print(msg)
 ##            config.writeLOG("\n\n" + msg + "\n")
+            msg2 = "stopwatch      = {:0.2f} seconds".format(config.stopwatch)
+            print(msg2)                 # 00000
+            msg3 = "(stopwatch shows the time spent in the 'almanac.find_discrete' function)"
+            print(msg3)
+            msg4 = "Moon daily data found in transient store = {} of {}".format(config.moonDataFound, config.moonDataSeeks)
+            print(msg4)
+            msg5 = "Moon continuously above/below horizon state found in transient store = {} of {}".format(config.moonHorizonFound, config.moonHorizonSeeks)
+            print(msg5)
             print()
             makePDF(fn, " creating nautical almanac for {}".format(year))
             tidy_up(fn)
@@ -164,7 +176,7 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
     elif s == '2':      # Sun Tables (for a year)
         for yearint in range(int(yearfr),int(yearto)+1):
             year = "{:4d}".format(yearint)  # year = "%4d" %yearint
-            msg = "\nCreating the sun tables for the year {}".format(year)
+            msg = "\nCreating the sun tables for the year {}\n".format(year)
             print(msg)
             first_day = datetime.date(yearint, 1, 1)
             fn = "sunalmanac{}{}".format(ff,year+DecFmt)
@@ -197,7 +209,7 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
 ##        config.initLOG()		# initialize log file
         start = time.time()
         config.stopwatch = 0.0      # 00000
-        msg = "\nCreating nautical almanac tables - from {}".format(sdmy)
+        msg = "\nCreating nautical almanac tables - from {}\n".format(sdmy)
         print(msg)
         fn = "almanac{}{}".format(ff,symd+DecFmt)
         outfile = open(fn + ".tex", mode="w", encoding="utf8")
@@ -210,6 +222,10 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
         print(msg2)                 # 00000
         msg3 = "(stopwatch shows the time spent in the 'almanac.find_discrete' function)"
         print(msg3)
+        msg4 = "Moon daily data found in transient store = {} of {}".format(config.moonDataFound, config.moonDataSeeks)
+        print(msg4)
+        msg5 = "Moon continuously above/below horizon state found in transient store = {} of {}".format(config.moonHorizonFound, config.moonHorizonSeeks)
+        print(msg5)
         print()
 ##        config.writeLOG('\n\n' + msg1 + '\n' + msg2 + '\n' + msg3)
 ##        config.closeLOG()
@@ -217,7 +233,7 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
         tidy_up(fn)
 
     elif s == '5':      # Sun tables only    - 30 days from today
-        msg = "\nCreating the sun tables - from {}".format(sdmy)
+        msg = "\nCreating the sun tables - from {}\n".format(sdmy)
         print(msg)
         fn = "sunalmanac{}{}".format(ff,symd+DecFmt)
         outfile = open(fn + ".tex", mode="w", encoding="utf8")
@@ -227,7 +243,7 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
         tidy_up(fn)
 
     elif s == '6':      # Event Time tables  -  6 days from today
-        msg = "\nCreating event time tables - from {}".format(sdmy)
+        msg = "\nCreating event time tables - from {}\n".format(sdmy)
         print(msg)
         fn = "event-times{}".format(symd)
         outfile = open(fn + ".tex", mode="w", encoding="utf8")
@@ -237,7 +253,7 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
         tidy_up(fn)
 
     elif s == '7':
-        msg = "\nCreating the Increments and Corrections tables"
+        msg = "\nCreating the Increments and Corrections tables\n"
         print(msg)
         fn = "inc"
         outfile = open(fn + ".tex", mode="w", encoding="utf8")

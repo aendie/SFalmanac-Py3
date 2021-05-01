@@ -38,9 +38,14 @@ ephemeris = [['de421.bsp',1900,2050],['de405.bsp',1900,2200],['de406.bsp',1900,2
 tbls = ''		# table style (global variable)
 decf = ''		# Declination format (global variable)
 stopwatch = 0.0 # time spent in a section of code
+moonDataSeeks = 0   # count of moon daily data seeks
+moonDataFound = 0   # moon daily data seeks found in transient data store
+moonHorizonSeeks = 0   # count of moon continuously above/below horizon seeks
+moonHorizonFound = 0   # moon continuously above/below horizon seeks found in transient data store
 
 # list of latitudes to include for Sunrise/Sunset/Twilight/Moonrise/Moonset...
 lat = [72,70,68,66,64,62,60,58,56,54,52,50,45,40,35,30,20,10,0,-10,-20,-30,-35,-40,-45,-50,-52,-54,-56,-58,-60]
+#note: algorithms in alma_skyfield.py expect 31 values in the above array
 
 # open/write/close a log file
 def initLOG():

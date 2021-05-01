@@ -75,6 +75,16 @@ Note that although you may be using the *de421.bsp* ephemeris (valid from 1900 t
 A double moonrise or moonset on the same day is now highlighted for better legibility. Event Time tables can now be generated - these are the tables containing data in hours:minutes:seconds, e.g. sunrise, sunset, moonrise, moonset and Meridian Passage.
 Accuracy to to the second of time is not required for navigational purposes, but may be used to compare accuracy with other algorithms. Some internal technical enhancements and minor changes to text are also included. For example, moonrise and moonset times now take into account the lunar distance from the Earth (which varies slightly).
 
+**UPDATE: May 2021**
+
+The indication of objects (Sun or Moon) continuously above or below the horizon has been corrected.
+
+Regarding Moon Data: ".. .." has been added to indicate that the moonrise/moonset event occurs the following day (at the specified latitude). If there is no moonrise/moonset for two or more consecutive days, black boxes indicate "moon below horizon"; white boxes indicate "moon above horizon". This brings it in line with Nautical Almanacs. (Previously they were only displayed when there was no moonrise *and* no moonset on a single day.)
+
+The additional calculations required are compensated with a transient Moon Data buffer store that always holds the latest five adjacent days of moon data, eliminating any need to recalculate data for the next or previous day (to determine if "moon above/below horizon" spans a minimum of two days.)
+
+Correction to Sun Data: "Sun continually above/below horizon" now shown if it applies to both Sunrise and Sunset, or *additionally* to both Civil Twilight Start & End; or *additionally* to both Astronomical Twilight Start & End, i.e. as two, four or six events per day and latitute. This brings it in line with Nautical Almanacs.
+
 ## Requirements
 
 &emsp;Most of the computation is done by the free Skyfield library.  
