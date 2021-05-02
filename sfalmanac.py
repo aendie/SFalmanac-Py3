@@ -143,6 +143,7 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
 ##        config.initLOG()		# initialize log file
         for yearint in range(int(yearfr),int(yearto)+1):
             start = time.time()
+            config.stopwatch = 0.0      # 00000
             config.moonDataSeeks = 0
             config.moonDataFound = 0
             config.moonHorizonSeeks = 0
@@ -190,6 +191,7 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
         print("Take a break - this computer needs some time for cosmic meditation.")
         for yearint in range(int(yearfr),int(yearto)+1):
             start = time.time()
+            config.stopwatch = 0.0      # 00000
             year = "{:4d}".format(yearint)  # year = "%4d" %yearint
             msg = "\nCreating the event time tables for the year {}".format(year)
             print(msg)
