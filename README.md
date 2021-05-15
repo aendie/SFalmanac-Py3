@@ -9,8 +9,7 @@ It uses the star database in Skyfield, which is based on data from the Hipparcos
 
 **NOTE: the Python Package Index (PyPI) edition is here:** https://pypi.org/project/sfalmanac/  
 **Users are encouraged to install the PyPI edition instead.**  
-NOTE: a Python 2.7 script with identical functionality can be found at:  https://github.com/aendie/SFalmanac-Py2  
-NOTE: a 100% [Ephem](https://rhodesmill.org/pyephem/) version of SFalmanac is available here:
+NOTE: a 100% [Ephem](https://rhodesmill.org/pyephem/)-based version of SFalmanac is available here:
 https://github.com/aendie/Pyalmanac-Py3  
 NOTE: the faster hybrid version is available here: 
 https://github.com/aendie/SkyAlmanac-Py3
@@ -63,7 +62,7 @@ Minor changes are included here to this original (non-PyPI) edition to reflect s
 
 **UPDATE: Mar 2021**
 
-&emsp;:smiley:&ensp;***UT is the new timescale employed in the almanac.***&ensp;:smiley:
+UT is the timescale now employed in the almanac.
 
 Two new options have been added into config.py: *useIERS = True* instructs Skyfield (if >= 1.31) to download Earth orientation data from IERS (International Earth Rotation and Reference Systems Service). *ageIERS = 30* instructs Skyfield to download fresh data from IERS if older tham that number of days. This implies greater accuracy for the generated almanacs (if Skyfield >= 1.31).
 
@@ -84,6 +83,10 @@ Regarding Moon Data: ".. .." has been added to indicate that the moonrise/moonse
 The additional calculations required are compensated with a transient Moon Data buffer store that always holds the latest five adjacent days of moon data, eliminating any need to recalculate data for the next or previous day (to determine if "moon above/below horizon" spans a minimum of two days.)
 
 Correction to Sun Data: "Sun continually above/below horizon" now shown if it applies to both Sunrise and Sunset, or *additionally* to both Civil Twilight Start & End; or *additionally* to both Astronomical Twilight Start & End, i.e. as two, four or six events per day and latitude. This brings it in line with Nautical Almanacs.
+
+&emsp;:smiley:&ensp;SFalmanac is now available on DockerHub [here](https://hub.docker.com/repository/docker/aendie/sfalmanac).&ensp;:smiley:
+
+The DockerHub image contains a Linux-based OS, TeX Live, the application code, and third party Python imports (including the astronomical libraries). It can be executed "in a container" on Windows 10 Pro, macOS or a Linux-based OS.
 
 ## Requirements
 

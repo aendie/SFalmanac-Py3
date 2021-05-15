@@ -300,12 +300,14 @@ def pages(first_day, p):
 
 
 def maketables(first_day, pagenum):
+
     # make tables starting from first_day
     year = first_day.year
     mth = first_day.month
     day = first_day.day
 
     # page size specific parameters
+        # pay attention to the limited page width
     if config.pgsz == "A4":
         paper = "a4paper"
         vsep1 = "1.5cm"
@@ -319,6 +321,7 @@ def maketables(first_day, pagenum):
         lm = "16mm"
         rm = "16mm"
     else:
+        # pay attention to the limited page height
         paper = "letterpaper"
         vsep1 = "0.8cm"
         vsep2 = "0.7cm"
@@ -365,11 +368,20 @@ def maketables(first_day, pagenum):
     \begin{titlepage}
     \begin{center}
     \textsc{\Large Generated using Skyfield}\\
-    \large http://rhodesmill.org/skyfield/\\[0.7cm]
-    % TRIM values: left bottom right top
-    \includegraphics[clip, trim=12mm 20cm 12mm 21mm, width=0.92\textwidth]{./A4chart0-180_P.pdf}\\[0.3cm]
-    \includegraphics[clip, trim=12mm 20cm 12mm 21mm, width=0.92\textwidth]{./A4chart180-360_P.pdf}\\'''
+    \large http://rhodesmill.org/skyfield/\\[0.7cm]'''
 
+    if config.dockerized:   # DOCKER ONLY
+        fn1 = "../A4chart0-180_P.pdf"
+        fn2 = "../A4chart180-360_P.pdf"
+    else:
+        fn1 = "./A4chart0-180_P.pdf"
+        fn2 = "./A4chart180-360_P.pdf"
+
+    alm = alm + r'''
+    % TRIM values: left bottom right top
+    \includegraphics[clip, trim=12mm 20cm 12mm 21mm, width=0.92\textwidth]{{{}}}\\[0.3cm]
+    \includegraphics[clip, trim=12mm 20cm 12mm 21mm, width=0.92\textwidth]{{{}}}\\'''.format(fn1,fn2)
+    
     alm = alm + r'''[{}]
     \textsc{{\huge Event Time Tables}}\\[{}]'''.format(vsep1,vsep2)
 

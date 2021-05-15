@@ -381,9 +381,16 @@ def almanac(first_day, pagenum):
     \begin{titlepage}\vspace*{1.5cm}
     \begin{center}
     \textsc{\Large Generated using Skyfield}\\
-    \large http://rhodesmill.org/skyfield/\\[1.5cm]
-    \includegraphics[width=0.4\textwidth]{./Ra}\\[1cm]
-    \textsc{\huge The Nautical Almanac for the Sun}\\[0.7cm]'''
+    \large http://rhodesmill.org/skyfield/\\[1.5cm]'''
+
+    if config.dockerized:   # DOCKER ONLY
+        fn = "../Ra"
+    else:
+        fn = "./Ra"
+
+    alm = alm + r'''
+    \includegraphics[width=0.4\textwidth]{{{}}}\\[1cm]
+    \textsc{{\huge The Nautical Almanac for the Sun}}\\[0.7cm]'''.format(fn)
 
     if pagenum == 25:
         alm = alm + r'''

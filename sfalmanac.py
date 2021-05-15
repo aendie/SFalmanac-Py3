@@ -51,16 +51,76 @@ def tidy_up(fn):
 if sys.version_info[0] < 3:
     raise Exception("Must be using Python 3")
 
-if config.ephndx not in set([0, 1, 2]):
-    print("Error - Please choose a valid ephemeris in config.py")
-    sys.exit(0)
-
-ts = init_sf()     # in alma_skyfield
 d = datetime.datetime.utcnow().date()
 first_day = datetime.date(d.year, d.month, d.day)
 
-#first_day = datetime.date(2023, 6, 24)	# for testing a specific date
-#d = first_day							# for testing a specific date
+# if this code runs locally (not in Docker), the settings in config.py are used.
+# if this code runs in Docker without use of an environment file, the settings in config.py apply.
+# if this code runs in Docker with an environment file ("--env-file ./.env"), then its values apply.
+ageERR = False
+ephERR = False
+if config.dockerized:
+    docker_main = os.getcwd()
+    spad = docker_main + "/astro-data/"
+    config.pgsz = os.getenv('PGSZ', config.pgsz)
+    config.moonimg = os.getenv('MOONIMG', str(config.moonimg))
+    config.ephndx = os.getenv('EPHNDX', str(config.ephndx))
+    if config.ephndx not in set(['0', '1', '2']):
+        ephERR = True
+    else:
+        config.ephndx = int(config.ephndx)
+    config.useIERS = os.getenv('USEIERS', str(config.useIERS))
+    config.ageIERS = os.getenv('AGEIERS', str(config.ageIERS))
+    if not str(config.ageIERS).isnumeric():
+        ageERR = True
+    else:
+        config.ageIERS = int(config.ageIERS)
+        if config.ageIERS <= 0:
+            ageERR = True
+    stdt = os.getenv('SDATE', 'None')
+    if stdt != 'None':      # for testing a specific date
+        try:
+            first_day = datetime.date(int(stdt[0:4]), int(stdt[5:7]), int(stdt[8:10]))
+        except:
+            print("Invalid date format for SDATE in .env: {}".format(stdt))
+            sys.exit(0)
+        d = first_day
+    err1 = "the Docker .env file"
+    err2 = "for MOONIMG in the Docker .env file"
+    err3 = "for USEIERS in the Docker .env file"
+    err4 = "for AGEIERS in the Docker .env file"
+else:
+    #first_day = datetime.date(2023, 6, 24)	# for testing a specific date
+    #d = first_day							# for testing a specific date
+    spad = "./"
+    if config.ephndx not in set([0, 1, 2]):
+        ephERR = True
+    config.moonimg = str(config.moonimg)
+    config.useIERS = str(config.useIERS)
+    err1 = "config.py"
+    err2 = "for 'moonimg' in config.py"
+    err3 = "for 'useIERS' in config.py"
+    err4 = "for 'ageIERS' in config.py"
+
+if ephERR:
+    print("Error - Please choose a valid ephemeris in {}".format(err1))
+    sys.exit(0)
+
+if config.pgsz not in set(['A4', 'Letter']):
+    print("Please choose a valid paper size in {}".format(err1))
+    sys.exit(0)
+
+if config.moonimg.lower() not in set(['true', 'false']):
+    print("Please choose a boolean value {}".format(err2))
+    sys.exit(0)
+
+if config.useIERS.lower() not in set(['true', 'false']):
+    print("Please choose a boolean value {}".format(err3))
+    sys.exit(0)
+
+if ageERR:
+    print("Please choose a positive non-zero numeric value {}".format(err4))
+    sys.exit(0)
 
 sday = "{:02d}".format(d.day)       # sday = "%02d" % d.day
 smth = "{:02d}".format(d.month)     # smth = "%02d" % d.month
@@ -69,10 +129,12 @@ symd = syr + smth + sday
 sdmy = sday + "." + smth + "." + syr
 yrmin = config.ephemeris[config.ephndx][1]
 yrmax = config.ephemeris[config.ephndx][2]
+config.moonimg = (config.moonimg.lower() == 'true') # to boolean
+config.useIERS = (config.useIERS.lower() == 'true') # to boolean
+f_prefix = config.docker_prefix
+f_postfix = config.docker_postfix
 
-if config.pgsz not in set(['A4', 'Letter']):
-    print("Please choose a valid paper size in config.py")
-    sys.exit(0)
+ts = init_sf(spad)     # in alma_skyfield
 
 s = input("""\nWhat do you want to create?:\n
     1   Nautical Almanac   (for a year)
@@ -154,7 +216,7 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
 ##            config.writeLOG(msg)
             first_day = datetime.date(yearint, 1, 1)
             fn = "almanac{}{}".format(ff,year+DecFmt)
-            outfile = open(fn + ".tex", mode="w", encoding="utf8")
+            outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
             outfile.write(tables.almanac(first_day,122))
             outfile.close()
             stop = time.time()
@@ -170,8 +232,10 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
             msg5 = "Moon continuously above/below horizon state found in transient store = {} of {}".format(config.moonHorizonFound, config.moonHorizonSeeks)
             print(msg5)
             print()
+            if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
             makePDF(fn, " creating nautical almanac for {}".format(year))
             tidy_up(fn)
+            if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 ##        config.closeLOG()     # close log after the for-loop
 
     elif s == '2':      # Sun Tables (for a year)
@@ -181,11 +245,13 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
             print(msg)
             first_day = datetime.date(yearint, 1, 1)
             fn = "sunalmanac{}{}".format(ff,year+DecFmt)
-            outfile = open(fn + ".tex", mode="w", encoding="utf8")
+            outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
             outfile.write(suntables.almanac(first_day,25))
             outfile.close()
+            if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
             makePDF(fn, " creating sun tables for {}".format(year))
             tidy_up(fn)
+            if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 
     elif s == '3':      # Event Time tables  (for a year)
         print("Take a break - this computer needs some time for cosmic meditation.")
@@ -197,15 +263,17 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
             print(msg)
             first_day = datetime.date(yearint, 1, 1)
             fn = "event-times{}".format(year)
-            outfile = open(fn + ".tex", mode="w", encoding="utf8")
+            outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
             outfile.write(eventtables.maketables(first_day,183))
             outfile.close()
             stop = time.time()
             msg = "execution time = {:0.2f} seconds".format(stop-start) # msg = "execution time = %0.2f seconds" %(stop-start)
             print(msg)
             print()
+            if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
             makePDF(fn, " creating event time tables for {}".format(year))
             tidy_up(fn)
+            if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 
     elif s == '4':      # Nautical almanac   -  6 days from today
 ##        config.initLOG()		# initialize log file
@@ -214,7 +282,7 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
         msg = "\nCreating nautical almanac tables - from {}\n".format(sdmy)
         print(msg)
         fn = "almanac{}{}".format(ff,symd+DecFmt)
-        outfile = open(fn + ".tex", mode="w", encoding="utf8")
+        outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
         outfile.write(tables.almanac(first_day,2))
         outfile.close()
         stop = time.time()
@@ -231,6 +299,7 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
         print()
 ##        config.writeLOG('\n\n' + msg1 + '\n' + msg2 + '\n' + msg3)
 ##        config.closeLOG()
+        if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
         makePDF(fn)
         tidy_up(fn)
 
@@ -238,9 +307,10 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
         msg = "\nCreating the sun tables - from {}\n".format(sdmy)
         print(msg)
         fn = "sunalmanac{}{}".format(ff,symd+DecFmt)
-        outfile = open(fn + ".tex", mode="w", encoding="utf8")
+        outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
         outfile.write(suntables.almanac(first_day,2))
         outfile.close()
+        if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
         makePDF(fn)
         tidy_up(fn)
 
@@ -248,9 +318,10 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
         msg = "\nCreating event time tables - from {}\n".format(sdmy)
         print(msg)
         fn = "event-times{}".format(symd)
-        outfile = open(fn + ".tex", mode="w", encoding="utf8")
+        outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
         outfile.write(eventtables.maketables(first_day,3))
         outfile.close()
+        if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
         makePDF(fn)
         tidy_up(fn)
 
@@ -258,9 +329,10 @@ if s in set(['1', '2', '3', '4', '5', '6', '7']):
         msg = "\nCreating the Increments and Corrections tables\n"
         print(msg)
         fn = "inc"
-        outfile = open(fn + ".tex", mode="w", encoding="utf8")
+        outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
         outfile.write(increments.makelatex())
         outfile.close()
+        if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
         makePDF(fn)
         tidy_up(fn)
 
