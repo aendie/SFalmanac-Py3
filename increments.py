@@ -258,7 +258,7 @@ def venparallax():
 	"""
 	return tab
 
-
+# >>>>>>>>>>>>>>>>>>>>>>>>
 def makelatex():
 	lx = r"""\documentclass[ 10pt, a4paper]{scrreprt}
 	\usepackage[automark]{scrlayer-scrpage}

@@ -29,8 +29,10 @@ pgsz = 'A4'     # page size 'A4' or 'Letter' (global variable)
 moonimg = True  # 'True' to include a moon image; otherwise 'False'
 useIERS = True  # 'True' to download finals2000A.all; 'False' to use built-in UT1 tables
 ageIERS = 30    # download a new finals2000A.all version after 'ageIERS' days if useIERS=True
+MULTIpr = True  # 'True' enables multiprocessing; otherwise only 1 CPU core is used
 
 # ================ DO NOT EDIT LINES BELOW HERE ================
+
 # Docker-related stuff...
 dockerized = False   # 'True' to build this app to run in a Docker-Linux container
 # NOTE: config.py has been "Dockerized" by use of environment variables in .env
@@ -42,13 +44,22 @@ dockerized = False   # 'True' to build this app to run in a Docker-Linux contain
 docker_pdf = "tmp"
 docker_prefix  = docker_pdf + "/" if dockerized else ""  # docker image is based on Linux
 docker_postfix = "/" + docker_pdf if dockerized else ""  # docker image is based on Linux
-# ==============================================================
+# --------------------------------------------------------------
+
+# global variables initialized during main program startup (and on every spawned process)
+CPUcores = 1        # CPU core count
+WINpf = False       # system platform
+LINUXpf = False     # system platform
+MACOSpf = False     # system platform
+
 # define global variables
 logfileopen = False
 ephemeris = [['de421.bsp',1900,2050],['de405.bsp',1900,2200],['de406.bsp',1900,2750]]
 tbls = ''		# table style (global variable)
 decf = ''		# Declination format (global variable)
-stopwatch = 0.0 # time spent in a section of code
+stopwatch = 0.0     # time spent in a section of code
+stopwatch2 = 0.0    # time spent in a section of code
+moonDaysCount = 0   # count of days processed by moonrise_set (alma_skyfield.py)
 moonDataSeeks = 0   # count of moon daily data seeks
 moonDataFound = 0   # moon daily data seeks found in transient data store
 moonHorizonSeeks = 0   # count of moon continuously above/below horizon seeks

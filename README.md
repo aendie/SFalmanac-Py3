@@ -88,6 +88,17 @@ Correction to Sun Data: "Sun continually above/below horizon" now shown if it ap
 
 The DockerHub image contains a Linux-based OS, TeX Live, the application code, and third party Python imports (including the astronomical libraries). It can be executed "in a container" on Windows 10 Pro, macOS or a Linux-based OS.
 
+**UPDATE: Jun 2021**
+
+This version introduces multiprocessing and thus a gain in performance. Single-processing is also a selectable option, if required. Testing has been successfully performed on Windows 10 and Ubuntu 20.04 LTS. (No testing can be performed on Mac OS.) Compared to single-processing ...
+
+* Creation (excluding conversion to PDF) of a 6-day Nautical Almanac is 4x faster on Windows 10; 2x faster on Linux.
+* Creation (excluding conversion to PDF) of 6-day Event Time Tables is almost 5x faster on Windows 10; 3x faster on Linux.
+
+Windows 10 uses up to 8 threads; Linux uses up to 12 threads in parallel. Testing was performed on a PC with an AMD Ryzen 7 3700X 8-Core (16 threads) Processor. Windows & Max OS spawn new processes; Linux forks new processes (the code is compatible with both techniques and will also run on CPUs with fewer cores/threads).
+
+This performance gain infers that there is practically no justification to use Skyalmanac, which was an interim solution to overcome the poor performance in SFalmanac at the cost of marginally poorer accuracy in event times (sunset/twilight/sunrise; moonrise/moonset).
+
 ## Requirements
 
 &emsp;Most of the computation is done by the free Skyfield library.  

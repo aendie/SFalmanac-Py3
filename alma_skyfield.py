@@ -368,7 +368,7 @@ def moonGHA(d, round2seconds = False):  # used in sunmoontab(m) & equationtab (i
 
     return gham, decm, degm, HPm, GHAupper, GHAlower, ghaSoD, ghaEoD
 
-def moonVD(d0,d):           # used in sunmoontab(m)
+def moonVD(d0, d):           # used in sunmoontab(m)
     # first value required is from 23:30 on the previous day...
     t0 = ts.ut1(d0.year, d0.month, d0.day, 23, 30, 0)
     pos0 = earth.at(t0).observe(moon)
@@ -601,7 +601,9 @@ def planetstransit(d, round2seconds = False):      # used in starstab & meridian
     position = earth.at(tfr).observe(venus)
     ra = position.apparent().radec(epoch='date')[0]
     #print('Venus transit: ', tfr.gast, ra.hours)
+    start00 = time.time()                   # 00000
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(venus))
+    config.stopwatch += time.time()-start00 # 00000
     #if len(transit_time) != 1:
     #    print('returned %s values' %len(transit_time))
     vtrans = rise_set(transit_time,y,u'Venus   0{} E transit'.format(degree_sign),round2seconds)[0]
@@ -618,7 +620,9 @@ def planetstransit(d, round2seconds = False):      # used in starstab & meridian
     tto = ts.ut1(d1.year, d1.month, d1.day, 0, 0, 0)
     position = earth.at(tfr).observe(mars)
     ra = position.apparent().radec(epoch='date')[0]
+    start00 = time.time()                   # 00000
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(mars))
+    config.stopwatch += time.time()-start00 # 00000
     marstrans = rise_set(transit_time,y,u'Mars    0{} E transit'.format(degree_sign),round2seconds)[0]
 
 # Jupiter
@@ -631,7 +635,9 @@ def planetstransit(d, round2seconds = False):      # used in starstab & meridian
     tto = ts.ut1(d1.year, d1.month, d1.day, 0, 0, 0)
     position = earth.at(tfr).observe(jupiter)
     ra = position.apparent().radec(epoch='date')[0]
+    start00 = time.time()                   # 00000
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(jupiter))
+    config.stopwatch += time.time()-start00 # 00000
     jtrans = rise_set(transit_time,y,u'Jupiter 0{} E transit'.format(degree_sign),round2seconds)[0]
     
 # Saturn
@@ -644,7 +650,9 @@ def planetstransit(d, round2seconds = False):      # used in starstab & meridian
     tto = ts.ut1(d1.year, d1.month, d1.day, 0, 0, 0)
     position = earth.at(tfr).observe(saturn)
     ra = position.apparent().radec(epoch='date')[0]
+    start00 = time.time()                   # 00000
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(saturn))
+    config.stopwatch += time.time()-start00 # 00000
     sattrans = rise_set(transit_time,y,u'Saturn  0{} E transit'.format(degree_sign),round2seconds)[0]
     
     return [vsha,vtrans,marssha,marstrans,jsha,jtrans,satsha,sattrans,hpmars,hpvenus]
@@ -781,8 +789,7 @@ def twilight(d, lat, hemisph, round2seconds = False):  # used in twilighttab (se
     # Sunrise/Sunset...
     start00 = time.time()                   # 00000
     actual, y = almanac.find_discrete(t0, t1, daylength(locn, 0.8333))
-    stop00 = time.time()                    # 00000
-    config.stopwatch += stop00-start00      # 00000
+    config.stopwatch += time.time()-start00 # 00000
     out[2], out[3], r2, s2, fs = rise_set(actual,y,lats,round2seconds)
     if out[2] == '--:--' and out[3] == '--:--':	# if neither sunrise nor sunset...
         abhd = True                             # enable above/below horizon display
@@ -793,8 +800,7 @@ def twilight(d, lat, hemisph, round2seconds = False):  # used in twilighttab (se
     # Civil Twilight...
     start00 = time.time()                   # 00000
     civil, y = almanac.find_discrete(t0, t1, daylength(locn, 6.0))
-    stop00 = time.time()                    # 00000
-    config.stopwatch += stop00-start00      # 00000
+    config.stopwatch += time.time()-start00 # 00000
     out[1], out[4], r2, s2, fs = rise_set(civil,y,lats,round2seconds)
     if abhd and out[1] == '--:--' and out[4] == '--:--':	# if neither begin nor end...
         yn = midnightsun(d, hemisph)
@@ -804,8 +810,7 @@ def twilight(d, lat, hemisph, round2seconds = False):  # used in twilighttab (se
     # Nautical Twilight...
     start00 = time.time()                   # 00000
     naut, y = almanac.find_discrete(t0, t1, daylength(locn, 12.0))
-    stop00 = time.time()                    # 00000
-    config.stopwatch += stop00-start00      # 00000
+    config.stopwatch += time.time()-start00 # 00000
     out[0], out[5], r2, s2, fs = rise_set(naut,y,lats,round2seconds)
     if abhd and out[0] == '--:--' and out[5] == '--:--':	# if neither begin nor end...
         yn = midnightsun(d, hemisph)
@@ -850,7 +855,7 @@ def daylength(topos, degBelowHorizon):
 #global sunvisible
 #sunvisible = [[None]*3 for i in range(31)]	# sunvisible[0][0] up to sunvisible[30][2]
 
-##UNUSED - replaced by midnightsun ##
+##UNUSED - only called by getsunstate (obsolete) ##
 def sunstate(ndx, h):
     # return the current sunstate (if known)
     out = '--:--'
@@ -860,7 +865,7 @@ def sunstate(ndx, h):
         out = r'''\rule{12Pt}{4Pt}'''
     return out
 
-##UNUSED - poor algorithm ##
+##UNUSED - poor algorithm - replaced by midnightsun ##
 def getsunstate(dt, lat, hemisph, horizon, j):
     # populate the sun state (visible or not) for the specified date & latitude
     # note: the first parameter 'dt' is already a datetime 30 seconds before midnight
@@ -878,7 +883,9 @@ def getsunstate(dt, lat, hemisph, horizon, j):
         t0 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
         dt += datetime.timedelta(days=1)
         t9 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
+        start00 = time.time()                   # 00000
         sunstate, y = almanac.find_discrete(t0, t9, daylength(locn, horizon))
+        config.stopwatch2 += time.time()-start00 # 00000
         if len(sunstate) > 0:
 
             if y[0]:
@@ -945,13 +952,13 @@ def fetchMoonData(d, tFrom, tNoon, tTo, i, lats, hFlag = False, round2seconds=Fa
         if MoonDate[k] == d:
             ndx = k
             iFnd = True
-        if config.moonDataSeeks >= 31 * MDlen and MoonDate[k] < min_d:
+        if config.moonDaysCount >= 31 * MDlen and MoonDate[k] < min_d:
             min_d = MoonDate[k]     # find oldest date in 'MoonDate'
             idx = k
     if not iFnd:
         # assigining a new index in a rotary fashion works, however a more intelligent algorithm
         #   is to re-use the index to the oldest date once all 'MDlen' dates are in use.
-        if config.moonDataSeeks >= 31 * MDlen:
+        if config.moonDaysCount >= 31 * MDlen:
             # assign a new index by re-using the oldest date
             ndx = idx
             MoonDate[ndx] = d
@@ -971,8 +978,7 @@ def fetchMoonData(d, tFrom, tNoon, tTo, i, lats, hFlag = False, round2seconds=Fa
         horizon = getHorizon(tNoon)
         start00 = time.time()                   # 00000
         moonrise, y = almanac.find_discrete(tFrom, tTo, moonday(locn, horizon))
-        stop00 = time.time()                    # 00000
-        config.stopwatch += stop00-start00      # 00000
+        time00 = time.time()-start00 # 00000
         rise, sett, ris2, set2, fs = rise_set(moonrise,y,lats,round2seconds)
 
         # only store single events (not double events, which are very rare)
@@ -990,6 +996,10 @@ def fetchMoonData(d, tFrom, tNoon, tTo, i, lats, hFlag = False, round2seconds=Fa
         
         #print("np_array[{}][{}][{}] = {}".format(ndx,i-1,0,np_array[ndx][i-1][0]))
         #print("np_array[{}][{}][{}] = {}".format(ndx,i-1,1,np_array[ndx][i-1][1]))
+        if hFlag:
+            config.stopwatch2 += time00
+        else:
+            config.stopwatch += time00
     else:                               # fetch stored data
         rise = np_array[ndx][i-1][0]
         sett = np_array[ndx][i-1][1]
@@ -1055,6 +1065,7 @@ def moonrise_set(d, lat, hemisph):  # used by tables.py in twilighttab (section 
     # first compute semi-diameter of moon (in degrees)
     horizon = getHorizon(t0noon)
 
+    config.moonDaysCount += 1
     config.moonDataSeeks += 1
     out[0], out[3], out2[0], out2[3], fs = fetchMoonData(d, t0, t0noon, t1, i, lats)
 
@@ -1062,6 +1073,7 @@ def moonrise_set(d, lat, hemisph):  # used by tables.py in twilighttab (section 
         moonvisible[i] = fs
 
     if out[0] == '--:--' and out[3] == '--:--':	# if neither moonrise nor moonset...
+        config.moonDataSeeks -= 1
         if moonvisible[i] == None:
             getmoonstate(dt, lat, hemisph)			# ...get moon state if unknown
         out[0] = moonstate(i)
@@ -1079,6 +1091,7 @@ def moonrise_set(d, lat, hemisph):  # used by tables.py in twilighttab (section 
     # first compute semi-diameter of moon (in degrees)
     horizon = getHorizon(t1noon)
 
+    config.moonDaysCount += 1
     config.moonDataSeeks += 1
     out[1], out[4], out2[1], out2[4], fs = fetchMoonData(d1, t1, t1noon, t2, i, lats)
 
@@ -1086,6 +1099,7 @@ def moonrise_set(d, lat, hemisph):  # used by tables.py in twilighttab (section 
         moonvisible[i] = fs
 
     if out[1] == '--:--' and out[4] == '--:--':	# if neither moonrise nor moonset...
+        config.moonDataSeeks -= 1
         if moonvisible[i] == None:
             getmoonstate(dt+datetime.timedelta(days=1), lat, hemisph)    # ...get moon state if unknown
         out[1] = moonstate(i)
@@ -1103,6 +1117,7 @@ def moonrise_set(d, lat, hemisph):  # used by tables.py in twilighttab (section 
     # first compute semi-diameter of moon (in degrees)
     horizon = getHorizon(t2noon)
 
+    config.moonDaysCount += 1
     config.moonDataSeeks += 1
     out[2], out[5], out2[2], out2[5], fs = fetchMoonData(d2, t2, t2noon, t3, i, lats)
 
@@ -1110,6 +1125,7 @@ def moonrise_set(d, lat, hemisph):  # used by tables.py in twilighttab (section 
         moonvisible[i] = fs
 
     if out[2] == '--:--' and out[5] == '--:--':	# if neither moonrise nor moonset...
+        config.moonDataSeeks -= 1
         if moonvisible[i] == None:
             getmoonstate(dt+datetime.timedelta(days=2), lat, hemisph)    # ...get moon state if unknown
         out[2] = moonstate(i)
@@ -1171,7 +1187,9 @@ def getmoonstate(dt, lat, hemisph):
         t0 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
         dt += datetime.timedelta(days=1)
         t9 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
+        start00 = time.time()                   # 00000
         moonrise, y = almanac.find_discrete(t0, t9, moonday(locn, horizon))
+        config.stopwatch2 += time.time()-start00 # 00000
 #        for n in range(len(moonrise)):
 #            print(y[n], moonrise[n].utc_datetime())
         if len(moonrise) > 0:
@@ -1794,7 +1812,9 @@ def find_new_moon(d):       # used in doublepage
     d0 = d - datetime.timedelta(days=30)
     t0 = ts.utc(d0.year, d0.month, d0.day, 12, 0, 0)
     t1 = ts.utc(d.year, d.month, d.day, 12, 0, 0)
+    start00 = time.time()                   # 00000
     t, y = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
+    config.stopwatch += time.time()-start00 # 00000
     for i in range(len(t)):
         if y[i] == 0:       # 0=New Moon, 1=First Quarter, 2=Full Moon, 3=Last Quarter
             PreviousNewMoon = t[i].utc_datetime()
@@ -1807,7 +1827,9 @@ def find_new_moon(d):       # used in doublepage
         # synodic month = about 29.53 days
         t2 = ts.utc(PreviousNewMoon + datetime.timedelta(days=28))
         t3 = ts.utc(PreviousNewMoon + datetime.timedelta(days=30))
+        start00 = time.time()                   # 00000
         t, y = almanac.find_discrete(t2, t3, almanac.moon_phases(eph))
+        config.stopwatch += time.time()-start00 # 00000
         for i in range(len(t)):
             if y[i] == 0:       # 0 = New Moon
                 NextNewMoon = t[i].utc_datetime()

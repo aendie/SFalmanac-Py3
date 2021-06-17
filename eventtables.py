@@ -22,16 +22,39 @@
 # https://docs.python.org/3/whatsnew/3.0.html#pep-3101-a-new-approach-to-string-formatting
 
 # Standard library imports
-import datetime		# required for .timedelta()
+from datetime import datetime, timedelta
 import sys			# required for .stdout.write()
 
 # Local application imports
-from alma_skyfield import *
 import config
+if config.MULTIpr:      # in multi-processing mode ...
+    # ------------------------------------------------------
+    # EITHER comment next 2 lines out to invoke executor.map
+    MPmode = 0
+    import multiprocessing as mp
+    #  *OR*  comment next 2 lines out to invoke pool.map
+##    MPmode = 1
+##    import concurrent.futures
+    # ------------------------------------------------------
+
+    from functools import partial
+    # ... still required for single-processing (in multi-processing mode):
+    from alma_skyfield import moonGHA, equation_of_time, getParams, find_new_moon
+    if not (config.WINpf and MPmode == 0): from alma_skyfield import planetstransit
+    # ... required for multi-processing:
+    from mp_eventtables import mp_twilight, mp_moonrise_set
+    if config.WINpf and MPmode == 0: from mp_eventtables import mp_planetstransit
+else:
+    # ... required for single-processing:
+    from alma_skyfield import *
+
 
 UpperLists = [[], []]    # moon GHA per hour for 2 days
 LowerLists = [[], []]    # moon colong GHA per hour for 2 days
 
+#----------------------
+#   internal methods
+#----------------------
 
 def buildUPlists2(n, ghaSoD, ghaPerHour, ghaEoD):
     # build list of hourly GHA values with modified start and end time to
@@ -70,9 +93,54 @@ def double_events_found(m1, m2):
             dbl = True
     return dbl
 
+# >>>>>>>>>>>>>>>>>>>>>>>>
+def mp_twilight_worker(date, ts, lat):
+    #print(" mp_twilight_worker Start {}".format(lat))
+    hemisph = 'N' if lat >= 0 else 'S'
+    twi = mp_twilight(date, lat, hemisph, ts, True) # ===>>> mp_eventtables.py
+    #print(" mp_twilight_worker Finish {}".format(lat))
+    return twi      # return list for all latitudes
 
-def twilighttab(date):
+def mp_moonlight_worker(date, ts, lat):
+    #print(" mp_moonlight_worker Start  {}".format(lat))
+    hemisph = 'N' if lat >= 0 else 'S'
+    ml = mp_moonrise_set(date, lat, hemisph, ts)    # ===>>> mp_eventtables.py
+    #print(" mp_moonlight_worker Finish {}".format(lat))
+    return ml       # return list for all latitudes
+
+def twilighttab(date, ts):
     # returns the twilight and moonrise tables
+
+    if config.MULTIpr:
+        # multiprocess twilight values per latitude simultaneously
+        if MPmode == 0:      # with pool.map
+            partial_func = partial(mp_twilight_worker, date, ts)
+            listoftwi = pool.map(partial_func, config.lat, 1)   # RECOMMENDED: chunksize = 1
+        if MPmode == 1:      # with executor.map
+            partial_func = partial(mp_twilight_worker, date, ts)
+            future_value = executor.map(partial_func, config.lat)
+            listoftwi = list(future_value)
+
+        for k in range(len(listoftwi)):
+            config.stopwatch += listoftwi[k][6]     # accumulate multiprocess processing time
+            del listoftwi[k][-1]
+        #print("listoftwi = {}".format(listoftwi))
+
+        # multiprocess moonrise/moonset values per latitude simultaneously
+        if MPmode == 0:      # with pool.map
+            partial_func2 = partial(mp_moonlight_worker, date, ts)
+            listmoon = pool.map(partial_func2, config.lat, 1)   # RECOMMENDED: chunksize = 1
+        if MPmode == 1:      # with executor.map
+            partial_func2 = partial(mp_moonlight_worker, date, ts)
+            future_val = executor.map(partial_func2, config.lat)
+            listmoon = list(future_val)
+
+        for k in range(len(listmoon)):
+            tuple_times = listmoon[k][-1]
+            config.stopwatch  += tuple_times[0]         # accumulate multiprocess processing time
+            config.stopwatch2 += tuple_times[1]         # accumulate multiprocess processing time
+            del listmoon[k][-1]
+        #print("listmoon = {}".format(listmoon))
 
 # Twilight tables ...........................................
     #lat = [72,70,68,66,64,62,60,58,56,54,52,50,45,40,35,30,20,10,0, -10,-20,-30,-35,-40,-45,-50,-52,-54,-56,-58,-60]
@@ -108,28 +176,31 @@ def twilighttab(date):
 '''
     lasthemisph = ""
     j = 5
-    for i in config.lat:
-        if i >= 0:
-            hemisph = 'N'
-        else:
-            hemisph = 'S'
-        if not(i in latNS):
-            hs = ""
-        else:
+    for lat in config.lat:
+        hemisph = 'N' if lat >= 0 else 'S'
+        hs = ""
+        if (lat in latNS):
             hs = hemisph
             if j%6 == 0:
                 tab = tab + r'''\rule{0pt}{2.6ex}
 '''
         lasthemisph = hemisph
-        twi = twilight(date, i, hemisph, True)
-        moon, moon2 = moonrise_set2(date,i,hemisph)
+
+        if config.MULTIpr:
+            twi = listoftwi[j-5]
+            moon = listmoon[j-5][0]
+            moon2 = listmoon[j-5][1]
+        else:
+            twi = twilight(date, lat, hemisph, True)
+            moon, moon2 = moonrise_set2(date, lat, hemisph)
+
         if not(double_events_found(moon,moon2)):
-            line = r'''\textbf{{{}}}'''.format(hs) + r''' {}$^\circ$'''.format(abs(i))
+            line = r'''\textbf{{{}}}'''.format(hs) + r''' {}$^\circ$'''.format(abs(lat))
             line = line + r''' & {} & {} & {} & {} & {} & {} & {} & {} \\
 '''.format(twi[0],twi[1],twi[2],twi[3],twi[4],twi[5],moon[0],moon[1])
         else:
             # print a row with two moonrise/moonset events on the same day & latitude
-            line = r'''\multirow{{2}}{{*}}{{\textbf{{{}}} {}$^\circ$}}'''.format(hs,abs(i))
+            line = r'''\multirow{{2}}{{*}}{{\textbf{{{}}} {}$^\circ$}}'''.format(hs,abs(lat))
             line = line + r''' & \multirow{{2}}{{*}}{{{}}}'''.format(twi[0])
             line = line + r''' & \multirow{{2}}{{*}}{{{}}}'''.format(twi[1])
             line = line + r''' & \multirow{{2}}{{*}}{{{}}}'''.format(twi[2])
@@ -164,10 +235,28 @@ def twilighttab(date):
 '''
     return tab
 
+# >>>>>>>>>>>>>>>>>>>>>>>>
+def mp_planets_worker(date, ts, obj):
+    #print(" mp_planets_worker Start  {}".format(obj))
+    sha = mp_planetstransit(date, ts, obj, True)    # ===>>> mp_evevttables.py
+    #print(" mp_planets_worker Finish {}".format(obj))
+    return sha      # return list for four planets
 
-def meridiantab(date):
-    # returns a table with ephemerieds for the navigational stars
+def meridiantab(date, ts):
+    # returns a table with ephemerides for the navigational stars
     # LaTeX SPACING: \enskip \quad \qquad
+
+    if config.MULTIpr and config.WINpf and MPmode == 0:
+        # multiprocess 'SHA + transit times' simultaneously
+        objlist = ['venus', 'mars', 'jupiter', 'saturn']
+        # set constant values to all arguments which are not changed during parallel processing
+        partial_func2 = partial(mp_planets_worker, date, ts)
+        listofsha = pool.map(partial_func2, objlist, 1)     # RECOMMENDED: chunksize = 1
+        for k in range(len(listofsha)):
+            config.stopwatch += listofsha[k][2]     # accumulate multiprocess processing time
+            del listofsha[k][-1]
+        #print("listofsha = {}".format(listofsha))
+
     out = r'''\quad
 \begin{tabular*}{0.25\textwidth}[t]{@{\extracolsep{\fill}}|rrr|}
 %%%\multicolumn{3}{c}{\normalsize{}}\\
@@ -180,7 +269,12 @@ def meridiantab(date):
 \textbf{{{}}} & \textbf{{SHA}} & \textbf{{Mer.pass}}\\
 \hline\multicolumn{{3}}{{|r|}}{{}}\\[-2.0ex]
 '''.format(datestr)
-    p = planetstransit(date, True)
+
+    if config.MULTIpr and config.WINpf and MPmode == 0:
+        p = [item for sublist in listofsha for item in sublist]
+    else:
+        p = planetstransit(date, True)
+
     m = m + r'''Venus & {} & {} \\
 '''.format(p[0],p[1])
     m = m + r'''Mars & {} & {} \\
@@ -198,7 +292,7 @@ def meridiantab(date):
 '''
     return out
 
-
+# >>>>>>>>>>>>>>>>>>>>>>>>
 def equationtab(date):
     # returns the Equation of Time section for 'date' and 'date+1'
 
@@ -211,7 +305,7 @@ def equationtab(date):
         buildUPlists2(n, ghaSoD, GHAupper, ghaEoD)
         buildLOWlists2(n, ghaSoD, GHAupper, ghaEoD)
         n += 1
-        d += datetime.timedelta(days=1)
+        d += timedelta(days=1)
 
     tab = r'''\begin{tabular}[t]{|r|ccc|ccc|}
 %\multicolumn{7}{c}{\normalsize{}}\\
@@ -226,24 +320,27 @@ def equationtab(date):
 
     d = date
     for k in range(2):
-        eq = equation_of_time(d,d + datetime.timedelta(days=1),UpperLists[k],LowerLists[k],True,True)
+        eq = equation_of_time(d,d + timedelta(days=1),UpperLists[k],LowerLists[k],True,True)
         tab = tab + r'''{} & {} & {} & {} & {} & {} & {}({}\%) \\
 '''.format(d.strftime("%d"),eq[0],eq[1],eq[2],eq[3],eq[4],eq[5],eq[6])
-        d += datetime.timedelta(days=1)
+        d += timedelta(days=1)
 
     tab = tab + r'''\cline{1-7}
 \end{tabular}'''
     return tab
 
+#----------------------
+#   page preparation
+#----------------------
 
-def doublepage(date, page1):
+def doublepage(date, page1, ts):
     # creates a doublepage (2 days) of tables
 
     # time delta values for the initial date&time...
     dut1, deltat = getParams(date)
-    timedelta = r"DUT1 = UT1-UTC = {:+.4f} sec\quad$\Delta$T = TT-UT1 = {:+.4f} sec".format(dut1, deltat)
+    timeDUT1 = r"DUT1 = UT1-UTC = {:+.4f} sec\quad$\Delta$T = TT-UT1 = {:+.4f} sec".format(dut1, deltat)
 
-    find_new_moon(date)
+    find_new_moon(date)     # required for 'moonage' and 'equation_of_time"
     page = ''
     leftindent = ""
     rightindent = ""
@@ -257,15 +354,15 @@ def doublepage(date, page1):
 {{\footnotesize {}}}\hfill\textbf{{{} to {} UT}}
 \end{{flushleft}}\par
 \begin{{scriptsize}}
-'''.format(timedelta, date.strftime("%Y %B %d"),(date+datetime.timedelta(days=1)).strftime("%b. %d"), rightindent)
+'''.format(timeDUT1, date.strftime("%Y %B %d"),(date+timedelta(days=1)).strftime("%b. %d"), rightindent)
 
     page = page + str1
 
-    date2 = date+datetime.timedelta(days=1)
-    page = page + twilighttab(date)
-    page = page + meridiantab(date)
-    page = page + twilighttab(date2)
-    page = page + meridiantab(date2)
+    date2 = date+timedelta(days=1)
+    page = page + twilighttab(date,ts)
+    page = page + meridiantab(date, ts)
+    page = page + twilighttab(date2,ts)
+    page = page + meridiantab(date2, ts)
     page = page + equationtab(date)
     page = page + r'''
 
@@ -274,13 +371,27 @@ def doublepage(date, page1):
     return page
 
 
-def pages(first_day, p):
-    # make 'p' doublepages beginning with first_day
+def pages(first_day, pnum, ts):
+
+    if config.MULTIpr:
+        # Windows & macOS defaults to "spawn"; Unix to "fork"
+        #mp.set_start_method("spawn")
+        n = config.CPUcores
+        if n > 12: n = 12   # use 12 cores maximum
+        if (config.WINpf or config.MACOSpf) and n > 8: n = 8   # 8 maximum if Windows or Mac OS
+        if MPmode == 0:
+            global pool
+            pool = mp.Pool(n)   # start 8 max. worker processes
+        if MPmode == 1:
+            global executor
+            executor = concurrent.futures.ProcessPoolExecutor(max_workers=config.CPUcores)
+
+    # make 'pnum' doublepages beginning with first_day
     out = ''
     page1 = True
     pmth = ''
-    for i in range(p):
-        if p == 183:	# if Transit Tables for a year...
+    for i in range(pnum):
+        if pnum == 183:	# if Event Time Tables for a whole year...
             cmth = first_day.strftime("%b ")
             if cmth != pmth:
                 print()		# progress indicator - next month
@@ -291,15 +402,26 @@ def pages(first_day, p):
                 sys.stdout.write('.')	# progress indicator
                 sys.stdout.flush()
             pmth = cmth
-        out = out + doublepage(first_day,page1)
+        out = out + doublepage(first_day,page1,ts)
         page1 = False
-        first_day += datetime.timedelta(days=2)
-    if p == 183:	# if Event Time Tables for a whole year...
+        first_day += timedelta(days=2)
+    if pnum == 183:	# if Event Time Tables for a whole year...
         print()		# newline to terminate progress indicator
+
+    if config.MULTIpr:
+        if MPmode == 0:
+            pool.close()    # close all worker processes
+            pool.join()
+        if MPmode == 1:
+            executor.shutdown()
+
     return out
 
+#--------------------------
+#   external entry point
+#--------------------------
 
-def maketables(first_day, pagenum):
+def maketables(first_day, pagenum, ts):
 
     # make tables starting from first_day
     year = first_day.year
@@ -411,7 +533,7 @@ def maketables(first_day, pagenum):
 \end{titlepage}
 \restoregeometry    % so it does not affect the rest of the pages'''
 
-    alm = alm + pages(first_day,pagenum)
+    alm = alm + pages(first_day,pagenum,ts)
     alm = alm + '''
 \end{document}'''
     return alm

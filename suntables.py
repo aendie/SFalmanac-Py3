@@ -27,9 +27,87 @@ import datetime		# required for .timedelta()
 import math
 
 # Local application imports
-from alma_skyfield import *
 import config
+from alma_skyfield import *
 
+#----------------------
+#   internal methods
+#----------------------
+
+def declCompare(prev_deg, curr_deg, next_deg, hr):
+    # for Declinations only...
+    # decide if to print N/S; decide if to print degrees
+    # note: the first three arguments are declinations in degrees (float)
+    prNS = False
+    prDEG = False
+    psign = math.copysign(1.0,prev_deg)
+    csign = math.copysign(1.0,curr_deg)
+    nsign = math.copysign(1.0,next_deg)
+    pdeg = abs(prev_deg)
+    cdeg = abs(curr_deg)
+    ndeg = abs(next_deg)
+    pdegi = int(pdeg)
+    cdegi = int(cdeg)
+    ndegi = int(ndeg)
+    pmin = round((pdeg-pdegi)*60, 1)	# minutes (float), rounded to 1 decimal place
+    cmin = round((cdeg-cdegi)*60, 1)	# minutes (float), rounded to 1 decimal place
+    nmin = round((ndeg-ndegi)*60, 1)	# minutes (float), rounded to 1 decimal place
+    pmini = int(pmin)
+    cmini = int(cmin)
+    nmini = int(nmin)
+    if pmini == 60:
+        pmin -= 60
+        pdegi += 1
+    if cmini == 60:
+        cmin -= 60
+        cdegi += 1
+    if nmini == 60:
+        nmin -= 60
+        ndegi += 1
+    # now we have the values in degrees+minutes as printed
+
+    if hr%6 == 0:
+        prNS = True			# print N/S for hour = 0, 6, 12, 18
+    else:
+        if psign != csign:
+            prNS = True		# print N/S if previous sign different
+    if hr < 23:
+        if csign != nsign:
+            prNS = True		# print N/S if next sign different
+    if prNS == False:
+        if pdegi != cdegi:
+            prDEG = True	# print degrees if changed since previous value
+        if cdegi != ndegi:
+            prDEG = True	# print degrees if next value is changed
+    else:
+        prDEG= True			# print degrees is N/S to be printed
+    return prNS, prDEG
+
+def NSdecl(deg, hr, printNS, printDEG, modernFMT):
+    # reformat degrees latitude to Ndd°mm.m or Sdd°mm.m
+    if deg[0:1] == '-':
+        hemisph = 'S'
+        deg = deg[1:]
+    else:
+        hemisph = 'N'
+    if not(printDEG):
+        deg = deg[10:]	# skip the degrees (always dd°mm.m) - note: the degree symbol '$^\circ$' is eight bytes long
+        if (hr+3)%6 == 0:
+            deg = r'''\raisebox{0.24ex}{\boldmath$\cdot$~\boldmath$\cdot$~~}''' + deg
+    if modernFMT:
+        if printNS or hr%6 == 0:
+            sdeg = r'''\textcolor{{blue}}{{{}}}'''.format(hemisph) + deg
+        else:
+            sdeg = deg
+    else:
+        if printNS or hr%6 == 0:
+            sdeg = r'''\textbf{{{}}}'''.format(hemisph) + deg
+        else:
+            sdeg = deg
+    #print("sdeg: ", sdeg)
+    return sdeg
+
+# >>>>>>>>>>>>>>>>>>>>>>>>
 def suntab(date):
     # generates LaTeX table for sun only (traditional)
     tab = r'''\noindent
@@ -94,6 +172,7 @@ def suntab(date):
     tab = tab + r'''\end{tabular*}'''
     return tab
 
+# >>>>>>>>>>>>>>>>>>>>>>>>
 def suntabm(date):
     # generates LaTeX table for sun only (modern)
     if config.decf != '+':	# USNO format for Declination
@@ -175,81 +254,9 @@ def suntabm(date):
 \end{tabular}'''
     return tab
 
-
-def declCompare(prev_deg, curr_deg, next_deg, hr):
-    # for Declinations only...
-    # decide if to print N/S; decide if to print degrees
-    # note: the first three arguments are declinations in degrees (float)
-    prNS = False
-    prDEG = False
-    psign = math.copysign(1.0,prev_deg)
-    csign = math.copysign(1.0,curr_deg)
-    nsign = math.copysign(1.0,next_deg)
-    pdeg = abs(prev_deg)
-    cdeg = abs(curr_deg)
-    ndeg = abs(next_deg)
-    pdegi = int(pdeg)
-    cdegi = int(cdeg)
-    ndegi = int(ndeg)
-    pmin = round((pdeg-pdegi)*60, 1)	# minutes (float), rounded to 1 decimal place
-    cmin = round((cdeg-cdegi)*60, 1)	# minutes (float), rounded to 1 decimal place
-    nmin = round((ndeg-ndegi)*60, 1)	# minutes (float), rounded to 1 decimal place
-    pmini = int(pmin)
-    cmini = int(cmin)
-    nmini = int(nmin)
-    if pmini == 60:
-        pmin -= 60
-        pdegi += 1
-    if cmini == 60:
-        cmin -= 60
-        cdegi += 1
-    if nmini == 60:
-        nmin -= 60
-        ndegi += 1
-    # now we have the values in degrees+minutes as printed
-
-    if hr%6 == 0:
-        prNS = True			# print N/S for hour = 0, 6, 12, 18
-    else:
-        if psign != csign:
-            prNS = True		# print N/S if previous sign different
-    if hr < 23:
-        if csign != nsign:
-            prNS = True		# print N/S if next sign different
-    if prNS == False:
-        if pdegi != cdegi:
-            prDEG = True	# print degrees if changed since previous value
-        if cdegi != ndegi:
-            prDEG = True	# print degrees if next value is changed
-    else:
-        prDEG= True			# print degrees is N/S to be printed
-    return prNS, prDEG
-
-
-def NSdecl(deg, hr, printNS, printDEG, modernFMT):
-    # reformat degrees latitude to Ndd°mm.m or Sdd°mm.m
-    if deg[0:1] == '-':
-        hemisph = 'S'
-        deg = deg[1:]
-    else:
-        hemisph = 'N'
-    if not(printDEG):
-        deg = deg[10:]	# skip the degrees (always dd°mm.m) - note: the degree symbol '$^\circ$' is eight bytes long
-        if (hr+3)%6 == 0:
-            deg = r'''\raisebox{0.24ex}{\boldmath$\cdot$~\boldmath$\cdot$~~}''' + deg
-    if modernFMT:
-        if printNS or hr%6 == 0:
-            sdeg = r'''\textcolor{{blue}}{{{}}}'''.format(hemisph) + deg
-        else:
-            sdeg = deg
-    else:
-        if printNS or hr%6 == 0:
-            sdeg = r'''\textbf{{{}}}'''.format(hemisph) + deg
-        else:
-            sdeg = deg
-    #print("sdeg: ", sdeg)
-    return sdeg
-
+#----------------------
+#   page preparation
+#----------------------
 
 def page(date):
 
@@ -294,17 +301,19 @@ def page(date):
 \end{scriptsize}'''
     return page
 
-
-def pages(first_day, p):
-    # make 'p' pages beginning with first_day
+def pages(first_day, pnum):
+    # make 'pnum' pages beginning with first_day
     out = ''
-    for i in range(p):
+    for i in range(pnum):
         out = out + page(first_day)
         first_day += datetime.timedelta(days=15)
     return out
 
+#--------------------------
+#   external entry point
+#--------------------------
 
-def almanac(first_day, pagenum):
+def sunalmanac(first_day, pagenum):
 
     # make almanac starting from first_day
     year = first_day.year
