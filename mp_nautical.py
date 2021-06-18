@@ -38,9 +38,6 @@ from skyfield.api import Topos, Star
 from skyfield import almanac
 from skyfield.nutationlib import iau2000b
 #from skyfield.data import hipparcos
-###from skyfield.units import Distance
-###from skyfield.units import Angle
-#import numpy as np
 
 # Local application imports
 import config

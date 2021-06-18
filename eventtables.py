@@ -36,17 +36,15 @@ if config.MULTIpr:      # in multi-processing mode ...
 ##    MPmode = 1
 ##    import concurrent.futures
     # ------------------------------------------------------
-
+    # ! DO NOT PLACE imports IN CONDITIONAL 'if'-STATEMENTS WHEN MULTI-PROCESSING !
     from functools import partial
-    # ... still required for single-processing (in multi-processing mode):
-    from alma_skyfield import moonGHA, equation_of_time, getParams, find_new_moon
-    if not (config.WINpf and MPmode == 0): from alma_skyfield import planetstransit
-    # ... required for multi-processing:
-    from mp_eventtables import mp_twilight, mp_moonrise_set
-    if config.WINpf and MPmode == 0: from mp_eventtables import mp_planetstransit
+    # ... following is still required for SINGLE-PROCESSING (in multi-processing mode):
+    from alma_skyfield import planetstransit, moonGHA, equation_of_time, getParams, find_new_moon
+    # ... following is required for MULTI-PROCESSING:
+    from mp_eventtables import mp_twilight, mp_moonrise_set, mp_planetstransit
 else:
-    # ... required for single-processing:
-    from alma_skyfield import *
+    # ... following is required for SINGLE-PROCESSING:
+    from alma_skyfield import twilight, moonrise_set2, planetstransit, moonGHA, equation_of_time, getParams, find_new_moon
 
 
 UpperLists = [[], []]    # moon GHA per hour for 2 days
@@ -238,7 +236,7 @@ def twilighttab(date, ts):
 # >>>>>>>>>>>>>>>>>>>>>>>>
 def mp_planets_worker(date, ts, obj):
     #print(" mp_planets_worker Start  {}".format(obj))
-    sha = mp_planetstransit(date, ts, obj, True)    # ===>>> mp_evevttables.py
+    sha = mp_planetstransit(date, ts, obj, True)    # ===>>> mp_eventtables.py
     #print(" mp_planets_worker Finish {}".format(obj))
     return sha      # return list for four planets
 

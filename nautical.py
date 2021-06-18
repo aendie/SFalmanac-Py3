@@ -44,24 +44,24 @@
 # Standard library imports
 from datetime import datetime, timedelta
 import sys			# required for .stdout.write()
-import math
+from math import cos as cos
+from math import copysign as copysign
+from math import pi as pi
 
 # Local application imports
-from alma_ephem import *
+from alma_ephem import magnitudes
 import config
 if config.MULTIpr:  # in multi-processing mode ...
+    # ! DO NOT PLACE imports IN CONDITIONAL 'if'-STATEMENTS WHEN MULTI-PROCESSING !
     import multiprocessing as mp
-
     from functools import partial
-    # ... still required for single-processing (in multi-processing mode):
-    from alma_skyfield import moonGHA, equation_of_time, getParams, find_new_moon, vdm_Venus, vdm_Mars, vdm_Jupiter, vdm_Saturn, ariestransit, stellar_info, sunSD, moonSD, moonage, moonphase
-    if not config.WINpf: from alma_skyfield import planetstransit, ariesGHA, venusGHA, marsGHA, jupiterGHA, saturnGHA, sunGHA, moonGHA, moonVD
-    # ... required for multi-processing:
-    from mp_nautical import mp_twilight, mp_moonrise_set
-    if config.WINpf: from mp_nautical import mp_planetstransit, hor_parallax, mp_planetGHA, mp_sunmoon
+    # ... following is still required for SINGLE-PROCESSING (in multi-processing mode):
+    from alma_skyfield import ariesGHA, venusGHA, marsGHA, jupiterGHA, saturnGHA, sunGHA, moonGHA, moonVD, sunSD, moonSD, vdm_Venus, vdm_Mars, vdm_Jupiter, vdm_Saturn, ariestransit, stellar_info, planetstransit, moonage, moonphase, equation_of_time, getParams, find_new_moon
+    # ... following is required for MULTI-PROCESSING:
+    from mp_nautical import mp_twilight, mp_moonrise_set, mp_planetstransit, hor_parallax, mp_planetGHA, mp_sunmoon
 else:
-    # ... required for single-processing:
-    from alma_skyfield import *
+    # ... following is required for SINGLE-PROCESSING:
+    from alma_skyfield import ariesGHA, venusGHA, marsGHA, jupiterGHA, saturnGHA, sunGHA, moonGHA, moonVD, sunSD, moonSD, vdm_Venus, vdm_Mars, vdm_Jupiter, vdm_Saturn, ariestransit, stellar_info, planetstransit, twilight, moonrise_set, moonage, moonphase, equation_of_time, getParams, find_new_moon
 
 
 UpperLists = [[], [], []]    # moon GHA per hour for 3 days
@@ -106,9 +106,9 @@ def declCompare(prev_deg, curr_deg, next_deg, hr):
     # note: the first three arguments are declinations in degrees (float)
     prNS = False
     prDEG = False
-    psign = math.copysign(1.0,prev_deg)
-    csign = math.copysign(1.0,curr_deg)
-    nsign = math.copysign(1.0,next_deg)
+    psign = copysign(1.0,prev_deg)
+    csign = copysign(1.0,curr_deg)
+    nsign = copysign(1.0,next_deg)
     pdeg = abs(prev_deg)
     cdeg = abs(curr_deg)
     ndeg = abs(next_deg)
@@ -201,34 +201,34 @@ def lunatikz(phase):
     diam   = 0.75     # moon image diameter (cm)
     top    = diam + f # top of moon (cm)
     bottom = 0.0 + f  # bottom of moon (cm)
-    if phase < math.pi*0.5:    # new moon to 1st quarter
+    if phase < pi*0.5:    # new moon to 1st quarter
         ystart = top
         fr_angle = 90           # trace a semicircle anticlockwise from top to bottom
         to_angle = 270
         ret_angle = -90         # trace an ellipse anticlockwise from bottom to top
         end_angle = 90
-        xradius = math.cos(phase) * radius
-    elif phase < math.pi:      # 1st quarter to full moon
+        xradius = cos(phase) * radius
+    elif phase < pi:      # 1st quarter to full moon
         ystart = top
         fr_angle = 90           # trace a semicircle anticlockwise from top to bottom
         to_angle = 270
         ret_angle = 270         # trace an ellipse clockwise from bottom to top
         end_angle = 90
-        xradius = abs(math.cos(phase)) * radius
-    elif phase < math.pi*1.5:  # full moon to 3rd quarter
+        xradius = abs(cos(phase)) * radius
+    elif phase < pi*1.5:  # full moon to 3rd quarter
         ystart = bottom
         fr_angle = -90          # trace a semicircle anticlockwise from bottom to top
         to_angle = 90
         ret_angle = 90          # trace an ellipse clockwise from top to bottom
         end_angle = -90
-        xradius = abs(math.cos(phase)) * radius
+        xradius = abs(cos(phase)) * radius
     else:                       # 3rd quarter to new moon
         ystart = bottom
         fr_angle = -90          # trace a semicircle anticlockwise from bottom to top
         to_angle = 90
         ret_angle = 90          # trace an ellipse anticlockwise from top to bottom
         end_angle = 270
-        xradius = math.cos(phase) * radius
+        xradius = cos(phase) * radius
 
     if config.dockerized:   # DOCKER ONLY
         fn = "../croppedmoon.png"
@@ -677,7 +677,7 @@ def sunmoontab(date, ts):
 
                 mdec, mNS = NSdeg(decm[h],False,h)
                 if h < 23:
-                    if mNS != mlastNS or math.copysign(1.0,degm[h]) != math.copysign(1.0,degm[h+1]):
+                    if mNS != mlastNS or copysign(1.0,degm[h]) != copysign(1.0,degm[h+1]):
                         mdec, mNS = NSdeg(decm[h],False,h,True)	# force N/S
                 mlastNS = mNS
 
@@ -700,7 +700,7 @@ def sunmoontab(date, ts):
 '''
                 tab = tab + line + lineterminator
                 h += 1
-                
+
         sds, dsm = sunSD(date)
         sdmm = moonSD(date)
         tab = tab + r'''\hline
@@ -785,7 +785,7 @@ def sunmoontabm(date, ts):
 
                 mdec, mNS = NSdeg(decm[h],True,h)
                 if h < 23:
-                    if mNS != mlastNS or math.copysign(1.0,degm[h]) != math.copysign(1.0,degm[h+1]):
+                    if mNS != mlastNS or copysign(1.0,degm[h]) != copysign(1.0,degm[h+1]):
                         mdec, mNS = NSdeg(decm[h],True,h,True)	# force NS
                 mlastNS = mNS
 
@@ -1176,11 +1176,11 @@ def doublepage(date, page1, pnum, ts):
 '''
 
     if config.tbls == "m":
-        page = page + planetstabm(date, ts)
+        page = page + planetstabm(date,ts)
     else:
-        page = page + planetstab(date, ts) + r'''\enskip
+        page = page + planetstab(date,ts) + r'''\enskip
 '''
-    page = page + starstab(date, ts)
+    page = page + starstab(date,ts)
     str1 = r'''
 \end{{scriptsize}}
 % ------------------ N E W   P A G E ------------------
@@ -1193,11 +1193,11 @@ def doublepage(date, page1, pnum, ts):
 '''.format(tm, bm, oddim, oddom, timeDUT1, date.strftime("%Y %B %d"), (date+timedelta(days=2)).strftime("%b. %d"), rightindent)
     page = page + str1
     if config.tbls == "m":
-        page = page + sunmoontabm(date, ts)
+        page = page + sunmoontabm(date,ts)
     else:
-        page = page + sunmoontab(date, ts) + r'''\enskip
+        page = page + sunmoontab(date,ts) + r'''\enskip
 '''
-    page = page + twilighttab(date, ts)
+    page = page + twilighttab(date,ts)
     # to avoid "Overfull \hbox" messages, leave a paragraph end before the end of a size change. (This may only apply to tabular* table style) See lines below...
     page = page + r'''
 

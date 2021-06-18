@@ -39,9 +39,6 @@ from skyfield.api import Topos, Star
 from skyfield import almanac
 from skyfield.nutationlib import iau2000b
 #from skyfield.data import hipparcos
-###from skyfield.units import Distance
-###from skyfield.units import Angle
-#import numpy as np
 
 # Local application imports
 import config
@@ -199,7 +196,7 @@ def rise_set_error(y, lats, t0):
 def mp_planetstransit(d, ts, obj, round2seconds = False):  # used in starstab & meridiantab (in eventtables.py)
     # returns SHA and Meridian Passage for the navigational planets
 
-    out = [None, None, None]  # return [planet_sha, planet_transit] + processing time
+    out = [None, None, None]    # return [planet_sha, planet_transit] + processing time
     eph = load(config.ephemeris[config.ephndx][0])	# load chosen ephemeris
     earth   = eph['earth']
     if obj == 'venus':   planet = eph['venus']
