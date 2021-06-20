@@ -3,9 +3,9 @@
 SFalmanac-Py3 is a Python 3 script that creates the daily pages of the Nautical Almanac **using the UT1 timescale** :smiley:. Official Nautical Almanacs employ a UT timescale (equivalent to UT1).
 These are tables that are needed for celestial navigation with a sextant. Although you are strongly advised to purchase the official Nautical Almanac, this program will reproduce the tables with no warranty or guarantee of accuracy.
 
-SFalmanac-Py3 was developed with the intention of having identical output format as Pyalmanac-Py3. As opposed to the older Ephem astronomy library, the intention was for it to be based entirely on the newer Skyfield astronomical library: https://rhodesmill.org/skyfield/, however Ephem is still required to calculate the planet magnitudes.
+SFalmanac-Py3 was developed with the intention of having identical output format as Pyalmanac-Py3. As opposed to the older Ephem astronomy library, the intention was for it to be based entirely on the newer Skyfield astronomical library: https://rhodesmill.org/skyfield/, however Ephem is still required to calculate the planet magnitudes. SFalmanac uses the star database in Skyfield, which is based on data from the Hipparcos Catalogue.
 
-**OUTDATED (now that a multiprocessing verson exists):** It uses the star database in Skyfield, which is based on data from the Hipparcos Catalogue. The principal disadvantage is that calculating twilight (actual, civil and nautical sunrise/sunset) and moonrise/moonset is extremely slow. As a consequence of this a new hybrid version is available that is four times faster. (The hybrid version uses Ephem to calculate twilight and moonrise/moonset with only a minimal loss of accuracy.)
+**OUTDATED (now that a multiprocessing verson exists):** The principal disadvantage is that calculating twilight (actual, civil and nautical sunrise/sunset) and moonrise/moonset is extremely slow. As a consequence of this a new hybrid version is available that is four times faster. (The hybrid version uses Ephem to calculate twilight and moonrise/moonset with only a minimal loss of accuracy.)
 
 **NOTE: the Python Package Index (PyPI) edition is here:** https://pypi.org/project/sfalmanac/  
 **Users are encouraged to install the PyPI edition instead.**  
