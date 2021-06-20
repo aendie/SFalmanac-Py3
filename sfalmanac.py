@@ -113,10 +113,10 @@ def checkCoreCount():       # only called when config.MULTIpr == True
             sys.exit(0)
     if config.CPUcores == 1:
         config.MULTIpr = False
-        print("\nERROR: 2 CPU cores minimum are required for parallel processessing")
+        print("\nERROR: 2 logical processors minimum are required for parallel processessing")
         print("       defaulting to single processessing")
     if config.CPUcores < 12 or (config.WINpf and config.CPUcores < 8):
-        print("\nNOTE: only {} CPU cores are available for parallel processessing".format(config.CPUcores))
+        print("\nNOTE: only {} logical processors are available for parallel processessing".format(config.CPUcores))
 
 
 ##Main##
