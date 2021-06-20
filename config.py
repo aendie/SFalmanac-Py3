@@ -29,7 +29,7 @@ pgsz = 'A4'     # page size 'A4' or 'Letter' (global variable)
 moonimg = True  # 'True' to include a moon image; otherwise 'False'
 useIERS = True  # 'True' to download finals2000A.all; 'False' to use built-in UT1 tables
 ageIERS = 30    # download a new finals2000A.all version after 'ageIERS' days if useIERS=True
-MULTIpr = True  # 'True' enables multiprocessing; otherwise only 1 CPU core is used
+MULTIpr = True  # 'True' enables multiprocessing; otherwise only 1 logical processor is used
 
 # ================ DO NOT EDIT LINES BELOW HERE ================
 

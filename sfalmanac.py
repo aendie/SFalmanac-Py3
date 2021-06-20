@@ -280,7 +280,6 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             for yearint in range(int(yearfr),int(yearto)+1):
                 if config.MULTIpr: checkCoreCount()
                 start = timer_start()
-                config.stopwatch = 0.0      # 00000
                 config.moonDataSeeks = 0
                 config.moonDataFound = 0
                 config.moonHorizonSeeks = 0
