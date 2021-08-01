@@ -24,7 +24,7 @@
 
 # Standard library imports
 import datetime		# required for .timedelta()
-import math
+from math import copysign as copysign
 
 # Local application imports
 import config
@@ -40,9 +40,9 @@ def declCompare(prev_deg, curr_deg, next_deg, hr):
     # note: the first three arguments are declinations in degrees (float)
     prNS = False
     prDEG = False
-    psign = math.copysign(1.0,prev_deg)
-    csign = math.copysign(1.0,curr_deg)
-    nsign = math.copysign(1.0,next_deg)
+    psign = copysign(1.0,prev_deg)
+    csign = copysign(1.0,curr_deg)
+    nsign = copysign(1.0,next_deg)
     pdeg = abs(prev_deg)
     cdeg = abs(curr_deg)
     ndeg = abs(next_deg)

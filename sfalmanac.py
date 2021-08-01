@@ -39,16 +39,31 @@ from eventtables import maketables
 from increments import makelatex
 
 
-def makePDF(fn, msg = ""):
-    command = 'pdflatex {}'.format(fn + ".tex")
-    os.system(command)
-    os.remove(fn + ".tex")
-    print("finished" + msg)
+def makePDF(args, fn, msg = ""):
+    command = 'pdflatex {}'.format(args + fn + ".tex")
+    if args == "":
+        os.system(command)
+        print("finished" + msg)
+    else:
+        returned_value = os.system(command)
+        if returned_value != 0:
+            if msg != "":
+                print("ERROR detected while" + msg)
+            else:
+                print("!!   ERROR detected while creating PDF file   !!")
+                print("!! Append '-v' or '-log' for more information !!")
+        else:
+            if msg != "":
+                print("finished" + msg)
+            else:
+                print("finished creating PDF")
     return
 
-def tidy_up(fn):
-    if os.path.isfile(fn + ".log"):
-        os.remove(fn + ".log")
+def tidy_up(fn, kl, kt):
+    if not kt: os.remove(fn + ".tex")
+    if not kl:
+        if os.path.isfile(fn + ".log"):
+            os.remove(fn + ".log")
     if os.path.isfile(fn + ".aux"):
         os.remove(fn + ".aux")
     return
@@ -124,6 +139,24 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
     if sys.version_info[0] < 3:
         raise Exception("Must be using Python 3")
 
+    try:
+        arg = sys.argv[1]
+    except IndexError:
+        arg = ""
+    if len(sys.argv) > 2 or not (arg == "" or arg == "-v" or arg == "-log" or arg == "-tex"):
+        print("One optional command line parameter is permitted:")
+        print(" python -m sfalmanac -v")
+        print(" ... to send pdfTeX output to the terminal")
+        print(" python -m sfalmanac -log")
+        print(" ... to keep the log file")
+        print(" python -m sfalmanac -tex")
+        print(" ... to keep the tex file")
+        sys.exit(0)
+
+    args = "" if arg == "-v" else "-interaction=batchmode -halt-on-error "
+    keeplog = True if arg == "-log" else False
+    keeptex = True if arg == "-tex" else False
+
     d = datetime.datetime.utcnow().date()
     first_day = datetime.date(d.year, d.month, d.day)
 
@@ -138,7 +171,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
         config.pgsz = os.getenv('PGSZ', config.pgsz)
         config.moonimg = os.getenv('MOONIMG', str(config.moonimg))
         config.ephndx = os.getenv('EPHNDX', str(config.ephndx))
-        if config.ephndx not in set(['0', '1', '2']):
+        if config.ephndx not in set(['0', '1', '2', '3', '4']):
             ephERR = True
         else:
             config.ephndx = int(config.ephndx)
@@ -166,7 +199,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
         #first_day = datetime.date(2023, 6, 24)	## for testing a specific date ##
         #d = first_day							## for testing a specific date ##
         spad = "./"
-        if config.ephndx not in set([0, 1, 2]):
+        if config.ephndx not in set([0, 1, 2, 3, 4]):
             ephERR = True
         config.moonimg = str(config.moonimg)
         config.useIERS = str(config.useIERS)
@@ -289,15 +322,16 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 print(msg)
     ##            config.writeLOG(msg)
                 first_day = datetime.date(yearint, 1, 1)
-                fn = "almanac{}{}".format(ff,year+DecFmt)
+                ff = "tradna_" if config.tbls != 'm' else "modna_"
+                fn = "{}{}".format(ff,year+DecFmt)
                 outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
                 outfile.write(almanac(first_day,122,ts))
                 outfile.close()
                 timer_end(start, 1)
                 search_stats()
                 if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
-                makePDF(fn, " creating nautical almanac for {}".format(year))
-                tidy_up(fn)
+                makePDF(args, fn, " creating nautical almanac for {}".format(year))
+                tidy_up(fn, keeplog, keeptex)
                 if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
     ##        config.closeLOG()     # close log after the for-loop
 
@@ -307,13 +341,14 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 msg = "\nCreating the sun tables for the year {}\n".format(year)
                 print(msg)
                 first_day = datetime.date(yearint, 1, 1)
-                fn = "sunalmanac{}{}".format(ff,year+DecFmt)
+                ff = "tradst_" if config.tbls != 'm' else "modst_"
+                fn = "{}{}".format(ff,year+DecFmt)
                 outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
                 outfile.write(sunalmanac(first_day,25))
                 outfile.close()
                 if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
-                makePDF(fn, " creating sun tables for {}".format(year))
-                tidy_up(fn)
+                makePDF(args, fn, " creating sun tables for {}".format(year))
+                tidy_up(fn, keeplog, keeptex)
                 if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 
         elif s == '3':      # Event Time tables  (for a year)
@@ -325,15 +360,15 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 msg = "\nCreating the event time tables for the year {}".format(year)
                 print(msg)
                 first_day = datetime.date(yearint, 1, 1)
-                fn = "event-times{}".format(year)
+                fn = "event-times_{}".format(year)
                 outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
                 outfile.write(maketables(first_day,183,ts))
                 outfile.close()
                 timer_end(start, 2)
                 print()
                 if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
-                makePDF(fn, " creating event time tables for {}".format(year))
-                tidy_up(fn)
+                makePDF(args, fn, " creating event time tables for {}".format(year))
+                tidy_up(fn, keeplog, keeptex)
                 if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 
         elif s == '4':      # Nautical almanac   -  6 days from today
@@ -342,7 +377,8 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             start = timer_start()
             msg = "\nCreating nautical almanac tables - from {}\n".format(sdmy)
             print(msg)
-            fn = "almanac{}{}".format(ff,symd+DecFmt)
+            ff = "tradna_" if config.tbls != 'm' else "modna_"
+            fn = "{}{}".format(ff,symd+DecFmt)
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
             outfile.write(almanac(first_day,2,ts))
             outfile.close()
@@ -351,33 +387,34 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
     ##        config.writeLOG('\n\n' + msg1 + '\n' + msg2 + '\n' + msg3)
     ##        config.closeLOG()
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
-            makePDF(fn)
-            tidy_up(fn)
+            makePDF(args, fn)
+            tidy_up(fn, keeplog, keeptex)
 
         elif s == '5':      # Sun tables only    - 30 days from today
             msg = "\nCreating the sun tables - from {}\n".format(sdmy)
             print(msg)
-            fn = "sunalmanac{}{}".format(ff,symd+DecFmt)
+            ff = "tradst_" if config.tbls != 'm' else "modst_"
+            fn = "{}{}".format(ff,symd+DecFmt)
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
             outfile.write(sunalmanac(first_day,2))
             outfile.close()
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
-            makePDF(fn)
-            tidy_up(fn)
+            makePDF(args, fn)
+            tidy_up(fn, keeplog, keeptex)
 
         elif s == '6':      # Event Time tables  -  6 days from today
             if config.MULTIpr: checkCoreCount()
             start = timer_start()
             msg = "\nCreating event time tables - from {}\n".format(sdmy)
             print(msg)
-            fn = "event-times{}".format(symd)
+            fn = "event-times_{}".format(symd)
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
             outfile.write(maketables(first_day,3,ts))
             outfile.close()
             timer_end(start, 2)
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
-            makePDF(fn)
-            tidy_up(fn)
+            makePDF(args, fn)
+            tidy_up(fn, keeplog, keeptex)
 
         elif s == '7':
             msg = "\nCreating the Increments and Corrections tables\n"
@@ -387,8 +424,8 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             outfile.write(makelatex())
             outfile.close()
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
-            makePDF(fn)
-            tidy_up(fn)
+            makePDF(args, fn)
+            tidy_up(fn, keeplog, keeptex)
 
     else:
         print("Error! Choose 1, 2, 3, 4, 5, 6 or 7")

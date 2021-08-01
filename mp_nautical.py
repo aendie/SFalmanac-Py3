@@ -292,9 +292,13 @@ def mp_planetGHA(d, ts, obj):  # used in planetstab
     eph = load(config.ephemeris[config.ephndx][0])	# load chosen ephemeris
     earth   = eph['earth']
     if obj == 'venus':   venus   = eph['venus']
-    if obj == 'mars':    mars    = eph['mars']
     if obj == 'jupiter': jupiter = eph['jupiter barycenter']
     if obj == 'saturn':  saturn  = eph['saturn barycenter']
+    if obj == 'mars':
+        if config.ephndx >= 3:
+            mars = eph['mars barycenter']
+        else:
+            mars = eph['mars']
 
     # calculate planet GHA
     DEC = None
@@ -318,9 +322,13 @@ def mp_planetstransit(d, ts, obj, round2seconds = False):  # used in starstab & 
     eph = load(config.ephemeris[config.ephndx][0])	# load chosen ephemeris
     earth   = eph['earth']
     if obj == 'venus':   planet = eph['venus']
-    if obj == 'mars':    planet = eph['mars']
     if obj == 'jupiter': planet = eph['jupiter barycenter']
     if obj == 'saturn':  planet = eph['saturn barycenter']
+    if obj == 'mars':
+        if config.ephndx >= 3:
+            planet = eph['mars barycenter']
+        else:
+            planet = eph['mars']
 
     # calculate planet SHA
     tfr = ts.ut1(d.year, d.month, d.day, 0, 0, 0)       # search from
@@ -362,7 +370,10 @@ def hor_parallax(d, ts):      # used in starstab (in eventtables.py)
     eph = load(config.ephemeris[config.ephndx][0])	# load chosen ephemeris
     earth = eph['earth']
     venus = eph['venus']
-    mars  = eph['mars']
+    if config.ephndx >= 3:
+        mars = eph['mars barycenter']
+    else:
+        mars = eph['mars']
 
 # Venus
     t0 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)

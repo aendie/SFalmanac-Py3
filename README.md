@@ -99,6 +99,23 @@ Windows 10 uses up to 8 threads; Linux uses up to 12 threads in parallel. Testin
 
 This performance gain infers that there is practically no justification to use Skyalmanac, which was an interim solution to overcome the poor performance in SFalmanac at the cost of marginally poorer accuracy in event times (sunset/twilight/sunrise; moonrise/moonset).
 
+**UPDATE: Jul 2021**
+
+The PDF filenames have been revised:
+
+* modna_\<starting date or year\>.pdf: for Nautical Almanacs in modern style
+* modst_\<starting date or year\>.pdf: for Sun Tables in modern style
+* tradna_\<starting date or year\>.pdf: for Nautical Almanacs in traditional style
+* tradst_\<starting date or year\>.pdf: for Sun Tables in traditional style
+
+One command line argument may be appended to the run command:
+
+* -v to invoke verbose mode (send pdfTeX execution steps to the console)
+* -log to preserve the log file
+* -tex to preserve the tex file
+
+de430t and de440 ephemerides have been added to *config.py*.
+
 ## Requirements
 
 &emsp;Most of the computation is done by the free Skyfield library.  

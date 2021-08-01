@@ -200,9 +200,14 @@ def mp_planetstransit(d, ts, obj, round2seconds = False):  # used in starstab & 
     eph = load(config.ephemeris[config.ephndx][0])	# load chosen ephemeris
     earth   = eph['earth']
     if obj == 'venus':   planet = eph['venus']
-    if obj == 'mars':    planet = eph['mars']
     if obj == 'jupiter': planet = eph['jupiter barycenter']
     if obj == 'saturn':  planet = eph['saturn barycenter']
+    if obj == 'mars':
+        if config.ephndx >= 3:
+            planet = eph['mars barycenter']
+        else:
+            planet = eph['mars']
+
 
     # calculate planet SHA
     tfr = ts.ut1(d.year, d.month, d.day, 0, 0, 0)       # search from
