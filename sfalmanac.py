@@ -145,11 +145,11 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
         arg = ""
     if len(sys.argv) > 2 or not (arg == "" or arg == "-v" or arg == "-log" or arg == "-tex"):
         print("One optional command line parameter is permitted:")
-        print(" python -m sfalmanac -v")
+        print(" python sfalmanac.py -v")
         print(" ... to send pdfTeX output to the terminal")
-        print(" python -m sfalmanac -log")
+        print(" python sfalmanac.py -log")
         print(" ... to keep the log file")
-        print(" python -m sfalmanac -tex")
+        print(" python sfalmanac.py -tex")
         print(" ... to keep the tex file")
         sys.exit(0)
 
