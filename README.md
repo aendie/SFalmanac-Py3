@@ -10,9 +10,6 @@ SFalmanac-Py3 now employs the capability of multiprocessing (if your processor h
 **Users are encouraged to install the Python Package Index (PyPI) edition to be found here:**
 https://pypi.org/project/sfalmanac/  
 
-NOTE: a 100% [Ephem](https://rhodesmill.org/pyephem/)-based version of SFalmanac is available here:
-https://github.com/aendie/Pyalmanac-Py3  
-
 The results have been crosschecked with USNO data to some extent.  
 (Nevertheless, constructive feedback is always appreciated.)
 
@@ -109,7 +106,7 @@ de430t and de440 ephemerides have been added to *config.py*.
 **UPDATE: Nov 2021**
 
 * Enhanced User Interface includes the possibility to generate tables starting at any valid date, or for any month (within -12/+11 months from today).
-* This checks if there is an Internet connection before attempting to update the Earth Orientation Parameters (EOP) from IERS.
+* It now checks if there is an Internet connection before attempting to update the Earth Orientation Parameters (EOP) from IERS.
 * Minor cosmetic improvements ('d'-correction in italics; greek 'nu' replaces 'v'-correction; Minutes-symbol added to SD and d)
 
 Increased accuracy due to the following minor improvements:
