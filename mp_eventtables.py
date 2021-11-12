@@ -377,7 +377,8 @@ def getHorizon(t, earth, moon):
     position = earth.at(t).observe(moon)   # at noontime (for daily average distance)
     distance = position.apparent().radec(epoch='date')[2]
     dist_km = distance.km
-    sdm = degrees(atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+# OLD: sdm = degrees(atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+    sdm = degrees(atan(1737.4/dist_km))   # volumetric mean radius of moon = 1737.4 km
     horizon = sdm + 0.5666667	# moon's equatorial radius + 34' (atmospheric refraction)
 
     return horizon

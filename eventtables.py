@@ -39,12 +39,12 @@ if config.MULTIpr:      # in multi-processing mode ...
     # ! DO NOT PLACE imports IN CONDITIONAL 'if'-STATEMENTS WHEN MULTI-PROCESSING !
     from functools import partial
     # ... following is still required for SINGLE-PROCESSING (in multi-processing mode):
-    from alma_skyfield import planetstransit, moonGHA, equation_of_time, getParams, find_new_moon
+    from alma_skyfield import planetstransit, moonGHA, equation_of_time, getDUT1, find_new_moon
     # ... following is required for MULTI-PROCESSING:
     from mp_eventtables import mp_twilight, mp_moonrise_set, mp_planetstransit
 else:
     # ... following is required for SINGLE-PROCESSING:
-    from alma_skyfield import twilight, moonrise_set2, planetstransit, moonGHA, equation_of_time, getParams, find_new_moon
+    from alma_skyfield import twilight, moonrise_set2, planetstransit, moonGHA, equation_of_time, getDUT1, find_new_moon
 
 
 UpperLists = [[], []]    # moon GHA per hour for 2 days
@@ -53,6 +53,14 @@ LowerLists = [[], []]    # moon colong GHA per hour for 2 days
 #----------------------
 #   internal methods
 #----------------------
+
+def fmtdate(d):
+    if config.pgsz == 'Letter': return d.strftime("%m/%d/%Y")
+    return d.strftime("%d.%m.%Y")
+
+def fmtdates(d1,d2):
+    if config.pgsz == 'Letter': return d1.strftime("%m/%d/%Y") + " - " + d2.strftime("%m/%d/%Y")
+    return d1.strftime("%d.%m.%Y") + " - " + d2.strftime("%d.%m.%Y")
 
 def buildUPlists2(n, ghaSoD, ghaPerHour, ghaEoD):
     # build list of hourly GHA values with modified start and end time to
@@ -291,18 +299,18 @@ def meridiantab(date, ts):
     return out
 
 # >>>>>>>>>>>>>>>>>>>>>>>>
-def equationtab(date):
+def equationtab(date, dpp):
     # returns the Equation of Time section for 'date' and 'date+1'
 
     d = date
     # first create the UpperLists & LowerLists arrays ...
-    n = 0
-    while n < 2:
+    nn = 0
+    while nn < dpp:
         gham, decm, degm, HPm, GHAupper, GHAlower, ghaSoD, ghaEoD = moonGHA(d, True)
 
-        buildUPlists2(n, ghaSoD, GHAupper, ghaEoD)
-        buildLOWlists2(n, ghaSoD, GHAupper, ghaEoD)
-        n += 1
+        buildUPlists2(nn, ghaSoD, GHAupper, ghaEoD)
+        buildLOWlists2(nn, ghaSoD, GHAupper, ghaEoD)
+        nn += 1
         d += timedelta(days=1)
 
     tab = r'''\begin{tabular}[t]{|r|ccc|ccc|}
@@ -317,7 +325,7 @@ def equationtab(date):
 '''
 
     d = date
-    for k in range(2):
+    for k in range(dpp):
         eq = equation_of_time(d,d + timedelta(days=1),UpperLists[k],LowerLists[k],True,True)
         tab = tab + r'''{} & {} & {} & {} & {} & {} & {}({}\%) \\
 '''.format(d.strftime("%d"),eq[0],eq[1],eq[2],eq[3],eq[4],eq[5],eq[6])
@@ -331,45 +339,50 @@ def equationtab(date):
 #   page preparation
 #----------------------
 
-def doublepage(date, page1, ts):
-    # creates a doublepage (2 days) of tables
+def page(date, ts, dpp=2):
 
     # time delta values for the initial date&time...
-    dut1, deltat = getParams(date)
+    dut1, deltat = getDUT1(date)
     timeDUT1 = r"DUT1 = UT1-UTC = {:+.4f} sec\quad$\Delta$T = TT-UT1 = {:+.4f} sec".format(dut1, deltat)
 
     find_new_moon(date)     # required for 'moonage' and 'equation_of_time"
-    page = ''
-    leftindent = ""
-    rightindent = ""
+    #leftindent = ""
+    #rightindent = ""
 
-    str1 = r'''
+    if dpp > 1:
+        str2 = r'''\textbf{{{} to {} UT}}
+'''.format(date.strftime("%Y %B %d"),(date+timedelta(days=dpp-1)).strftime("%b. %d"))
+    else:
+        str2 = r'''\textbf{{{} UT}}
+'''.format(date.strftime("%Y %B %d"))
+
+    page = r'''
 % ------------------ N E W   P A G E ------------------
 \newpage
 \sffamily
 \noindent
 \begin{{flushleft}}     % required so that \par works
-{{\footnotesize {}}}\hfill\textbf{{{} to {} UT}}
+{{\footnotesize {}}}\hfill{}
 \end{{flushleft}}\par
 \begin{{scriptsize}}
-'''.format(timeDUT1, date.strftime("%Y %B %d"),(date+timedelta(days=1)).strftime("%b. %d"), rightindent)
-
-    page = page + str1
+'''.format(timeDUT1, str2)
 
     date2 = date+timedelta(days=1)
-    page = page + twilighttab(date,ts)
-    page = page + meridiantab(date, ts)
-    page = page + twilighttab(date2,ts)
-    page = page + meridiantab(date2, ts)
-    page = page + equationtab(date)
+    page += twilighttab(date,ts)
+    page += meridiantab(date, ts)
+    if dpp == 2:
+        page += twilighttab(date2,ts)
+        page += meridiantab(date2, ts)
+    page += equationtab(date, dpp)
+
+    # to avoid "Overfull \hbox" messages, leave a paragraph end before the end of a size change. (This may only apply to tabular* table style) See lines below...
     page = page + r'''
 
 \end{scriptsize}'''
-    # to avoid "Overfull \hbox" messages, leave a paragraph end before the end of a size change. (See lines above)
     return page
 
-
-def pages(first_day, pnum, ts):
+def pages(first_day, dtp, ts):
+    # dtp = 0 if for entire year; = -1 if for entire month; else days to print
 
     if config.MULTIpr:
         # Windows & macOS defaults to "spawn"; Unix to "fork"
@@ -384,27 +397,63 @@ def pages(first_day, pnum, ts):
             global executor
             executor = concurrent.futures.ProcessPoolExecutor(max_workers=config.CPUcores)
 
-    # make 'pnum' doublepages beginning with first_day
     out = ''
-    page1 = True
     pmth = ''
-    for i in range(pnum):
-        if pnum == 183:	# if Event Time Tables for a whole year...
-            cmth = first_day.strftime("%b ")
+    dpp = 2         # 2 days per page maximum
+    day1 = first_day
+
+    if dtp == 0:        # if entire year
+        year = first_day.year
+        yr = year
+        while year == yr:
+            cmth = day1.strftime("%b ")
+            day2 = day1 + timedelta(days=1)
+            if day2.year != yr:
+                dpp -= day2.day
+                if dpp <= 0: return out
             if cmth != pmth:
-                print()		# progress indicator - next month
+                print() # progress indicator - next month
                 #print(cmth, end='')
                 sys.stdout.write(cmth)	# next month
                 sys.stdout.flush()
+                pmth = cmth
             else:
                 sys.stdout.write('.')	# progress indicator
                 sys.stdout.flush()
-            pmth = cmth
-        out = out + doublepage(first_day,page1,ts)
-        page1 = False
-        first_day += timedelta(days=2)
-    if pnum == 183:	# if Event Time Tables for a whole year...
-        print()		# newline to terminate progress indicator
+            out += page(day1, ts, dpp)
+            day1 += timedelta(days=2)
+            year = day1.year
+    elif dtp == -1:     # if entire month
+        mth = first_day.month
+        m = mth
+        while mth == m:
+            cmth = day1.strftime("%b ")
+            day2 = day1 + timedelta(days=1)
+            if day2.month != m:
+                dpp -= day2.day
+                if dpp <= 0: return out
+            if cmth != pmth:
+                print() # progress indicator - next month
+                #print(cmth, end='')
+                sys.stdout.write(cmth)	# next month
+                sys.stdout.flush()
+                pmth = cmth
+            else:
+                sys.stdout.write('.')	# progress indicator
+                sys.stdout.flush()
+            out += page(day1, ts, dpp)
+            day1 += timedelta(days=2)
+            mth = day1.month
+    else:           # print 'dtp' days beginning with first_day
+        i = dtp   # don't decrement dtp
+        while i > 0:
+            if i < 2: dpp = i
+            out += page(day1, ts, dpp)
+            i -= 2
+            day1 += timedelta(days=2)
+
+    if dtp <= 0:       # if Event Time Tables for a whole month/year...
+        print("\n")	    # 2 x newline to terminate progress indicator
 
     if config.MULTIpr:
         if MPmode == 0:
@@ -419,7 +468,8 @@ def pages(first_day, pnum, ts):
 #   external entry point
 #--------------------------
 
-def maketables(first_day, pagenum, ts):
+def maketables(first_day, dtp, ts):
+    # dtp = 0 if for entire year; = -1 if for entire month; else days to print
 
     # make tables starting from first_day
     year = first_day.year
@@ -427,8 +477,8 @@ def maketables(first_day, pagenum, ts):
     day = first_day.day
 
     # page size specific parameters
-        # pay attention to the limited page width
     if config.pgsz == "A4":
+        # pay attention to the limited page width
         paper = "a4paper"
         vsep1 = "1.5cm"
         vsep2 = "1.0cm"
@@ -454,12 +504,14 @@ def maketables(first_day, pagenum, ts):
         lm = "15mm"
         rm = "11mm"
 
-    alm = r'''\documentclass[10pt, twoside, {}]{{report}}'''.format(paper)
+    # default is 'oneside'...
+    alm = r'''\documentclass[10pt, {}]{{report}}'''.format(paper)
 
     alm = alm + r'''
 %\usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
-\usepackage{fontenc}'''
+\usepackage{fontenc}
+\usepackage{enumitem} % used to customize the {description} environment'''
 
     # to troubleshoot add "showframe, verbose," below:
     alm = alm + r'''
@@ -505,16 +557,26 @@ def maketables(first_day, pagenum, ts):
     alm = alm + r'''[{}]
     \textsc{{\huge Event Time Tables}}\\[{}]'''.format(vsep1,vsep2)
 
-    if pagenum == 183:
+    if dtp == 0:
         alm = alm + r'''
     \HRule \\[0.5cm]
     {{ \Huge \bfseries {}}}\\[0.2cm]
     \HRule \\'''.format(year)
+    elif dtp == -1:
+        alm = alm + r'''
+    \HRule \\[0.5cm]
+    {{ \Huge \bfseries {}}}\\[0.2cm]
+    \HRule \\'''.format(first_day.strftime("%B %Y"))
+    elif dtp > 1:
+        alm = alm + r'''
+    \HRule \\[0.5cm]
+    {{ \Huge \bfseries {}}}\\[0.2cm]
+    \HRule \\'''.format(fmtdates(first_day,first_day+timedelta(days=dtp-1)))
     else:
         alm = alm + r'''
     \HRule \\[0.5cm]
-    {{ \Huge \bfseries from {}.{}.{}}}\\[0.2cm]
-    \HRule \\'''.format(day,mth,year)
+    {{ \Huge \bfseries {}}}\\[0.2cm]
+    \HRule \\'''.format(fmtdate(first_day))
 
     alm = alm + r'''
     \begin{center}\begin{tabular}[t]{rl}
@@ -525,13 +587,14 @@ def maketables(first_day, pagenum, ts):
     {\large \today}
     \HRule \\[0.2cm]
     \end{center}
-    \begin{description}\footnotesize
-    \item[Disclaimer:] These are computer generated tables. They focus on times of rising and setting events and are rounded to the second... primarily intended for comparison with other astronomical algorithms (not for navigation). Meridian Passage times of the sun, moon and four planets are included. All times are in UT (=UT1).
+    \begin{description}[leftmargin=5.5em,style=nextline]\footnotesize
+    \item[Disclaimer:] These are computer generated tables. They focus on times of rising and setting events and are rounded to the second (not primarily intended for navigation). Meridian Passage times of the sun, moon and four planets are included. All times are in UT (=UT1).
+    The author claims no liability for any consequences arising from use of these tables.
     \end{description}
 \end{titlepage}
 \restoregeometry    % so it does not affect the rest of the pages'''
 
-    alm = alm + pages(first_day,pagenum,ts)
+    alm = alm + pages(first_day,dtp,ts)
     alm = alm + '''
 \end{document}'''
     return alm

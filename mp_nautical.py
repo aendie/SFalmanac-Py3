@@ -47,6 +47,7 @@ import config
 #----------------------
 
 hour_of_day = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+next_hour_of_day = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 degree_sign= u'\N{DEGREE SIGN}'
 
 #----------------------
@@ -451,7 +452,8 @@ def mp_moonGHA(d, ts, earth, moon, round2seconds = False):  # used in sunmoontab
         decm[i] = fmtdeg(dec.degrees[i],2)
         degm[i] = dec.degrees[i]
         dist_km = distance.km[i]
-        HP = degrees(atan(6378.0/dist_km))	# radius of earth = 6378.0 km
+# OLD:  HP = degrees(atan(6378.0/dist_km))	# radius of earth = 6378.0 km
+        HP = degrees(atan(6371.0/dist_km))	# volumetric mean radius of earth = 6371.0 km
         HPm[i] = "{:0.1f}'".format(HP * 60)     # convert to minutes of arc
 
     # degm has been added for the sunmoontab function
@@ -460,17 +462,21 @@ def mp_moonGHA(d, ts, earth, moon, round2seconds = False):  # used in sunmoontab
 
     return gham, decm, degm, HPm, GHAupper, GHAlower, ghaSoD, ghaEoD
 
-def mp_moonVD(d0, d, ts, earth, moon):           # used in sunmoontab(m)
-    # first value required is from 23:30 on the previous day...
-    t0 = ts.ut1(d0.year, d0.month, d0.day, 23, 30, 0)
+def mp_moonVD(d00, d, ts, earth, moon):           # used in sunmoontab(m)
+# OLD:  # first value required is from 23:30 on the previous day...
+# OLD:  t0 = ts.ut1(d00.year, d00.month, d00.day, 23, 30, 0)
+    # first value required is from 00:00 on the current day...
+    t0 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
     pos0 = earth.at(t0).observe(moon)
     ra0 = pos0.apparent().radec(epoch='date')[0]
     dec0 = pos0.apparent().radec(epoch='date')[1]
     V0 = gha2deg(t0.gast, ra0.hours)
     D0 = dec0.degrees
 
-    # ...then 24 values at hourly intervals from 23:30 onwards
-    t = ts.ut1(d.year, d.month, d.day, hour_of_day, 30, 0)
+# OLD:  # ...then 24 values at hourly intervals from 23:30 onwards
+# OLD:  t = ts.ut1(d.year, d.month, d.day, hour_of_day, 30, 0)
+    # ...then 24 values at hourly intervals from 00:00 onwards
+    t = ts.ut1(d.year, d.month, d.day, next_hour_of_day, 0, 0)
     position = earth.at(t).observe(moon)
     ra = position.apparent().radec(epoch='date')[0]
     dec = position.apparent().radec(epoch='date')[1]
@@ -526,7 +532,8 @@ def mp_stellar_info(d, ts, df, n):        # used in starstab
     eph = load(config.ephemeris[config.ephndx][0])	# load chosen ephemeris
     earth   = eph['earth']
 
-    t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)  #calculate at noon
+    t00 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)   #calculate at midnight
+    #t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)  #calculate at noon
     out = []
 
     if n == 0: db = db1
@@ -542,7 +549,7 @@ def mp_stellar_info(d, ts, df, n):        # used in starstab
         HIPnum = line[x1+1:]
 
         star = Star.from_dataframe(df.loc[int(HIPnum)])
-        astrometric = earth.at(t12).observe(star).apparent()
+        astrometric = earth.at(t00).observe(star).apparent()
         ra, dec, distance = astrometric.radec(epoch='date')
 
         sha  = fmtgha(0, ra.hours)
@@ -759,7 +766,8 @@ def getHorizon(t, earth, moon):
     position = earth.at(t).observe(moon)   # at noontime (for daily average distance)
     distance = position.apparent().radec(epoch='date')[2]
     dist_km = distance.km
-    sdm = degrees(atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+# OLD: sdm = degrees(atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+    sdm = degrees(atan(1737.4/dist_km))   # volumetric mean radius of moon = 1737.4 km
     horizon = sdm + 0.5666667	# moon's equatorial radius + 34' (atmospheric refraction)
 
     return horizon

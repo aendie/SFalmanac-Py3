@@ -56,12 +56,12 @@ if config.MULTIpr:  # in multi-processing mode ...
     import multiprocessing as mp
     from functools import partial
     # ... following is still required for SINGLE-PROCESSING (in multi-processing mode):
-    from alma_skyfield import ariesGHA, venusGHA, marsGHA, jupiterGHA, saturnGHA, sunGHA, moonGHA, moonVD, sunSD, moonSD, vdm_Venus, vdm_Mars, vdm_Jupiter, vdm_Saturn, ariestransit, stellar_info, planetstransit, moonage, moonphase, equation_of_time, getParams, find_new_moon
+    from alma_skyfield import ariesGHA, venusGHA, marsGHA, jupiterGHA, saturnGHA, sunGHA, moonGHA, moonVD, sunSD, moonSD, vdm_Venus, vdm_Mars, vdm_Jupiter, vdm_Saturn, ariestransit, stellar_info, planetstransit, moonage, moonphase, equation_of_time, getDUT1, find_new_moon
     # ... following is required for MULTI-PROCESSING:
     from mp_nautical import mp_twilight, mp_moonrise_set, mp_planetstransit, hor_parallax, mp_planetGHA, mp_sunmoon
 else:
     # ... following is required for SINGLE-PROCESSING:
-    from alma_skyfield import ariesGHA, venusGHA, marsGHA, jupiterGHA, saturnGHA, sunGHA, moonGHA, moonVD, sunSD, moonSD, vdm_Venus, vdm_Mars, vdm_Jupiter, vdm_Saturn, ariestransit, stellar_info, planetstransit, twilight, moonrise_set, moonage, moonphase, equation_of_time, getParams, find_new_moon
+    from alma_skyfield import ariesGHA, venusGHA, marsGHA, jupiterGHA, saturnGHA, sunGHA, moonGHA, moonVD, sunSD, moonSD, vdm_Venus, vdm_Mars, vdm_Jupiter, vdm_Saturn, ariestransit, stellar_info, planetstransit, twilight, moonrise_set, moonage, moonphase, equation_of_time, getDUT1, find_new_moon
 
 
 UpperLists = [[], [], []]    # moon GHA per hour for 3 days
@@ -70,6 +70,14 @@ LowerLists = [[], [], []]    # moon colong GHA per hour for 3 days
 #----------------------
 #   internal methods
 #----------------------
+
+def fmtdate(d):
+    if config.pgsz == 'Letter': return d.strftime("%m/%d/%Y")
+    return d.strftime("%d.%m.%Y")
+
+def fmtdates(d1,d2):
+    if config.pgsz == 'Letter': return d1.strftime("%m/%d/%Y") + " - " + d2.strftime("%m/%d/%Y")
+    return d1.strftime("%d.%m.%Y") + " - " + d2.strftime("%d.%m.%Y")
 
 def buildUPlists(n, ghaSoD, ghaPerHour, ghaEoD):
     # build list of hourly GHA values with modified start and end time to
@@ -357,13 +365,17 @@ def planetstab(date, ts):
                 tab = tab + line + lineterminator
                 h += 1
 
-        RAc_v, Dc_v = vdm_Venus(date)
+        mag_v, mag_m, mag_j, mag_s = magnitudes(date)   # magnitudes from Ephem
+        RAc_v, Dc_v, mag_v = vdm_Venus(date)
         RAc_m, Dc_m = vdm_Mars(date)
-        RAc_j, Dc_j = vdm_Jupiter(date)
+        RAc_j, Dc_j, mag_j = vdm_Jupiter(date)
         RAc_s, Dc_s = vdm_Saturn(date)
-        mag_v, mag_m, mag_j, mag_s = magnitudes(date)
         tab = tab + r'''\hline
-\multicolumn{{2}}{{|c|}}{{\rule{{0pt}}{{2.4ex}}Mer.pass.:{}}} & \multicolumn{{2}}{{c|}}{{v{} d{} m{}}} & \multicolumn{{2}}{{c|}}{{v{} d{} m{}}} & \multicolumn{{2}}{{c|}}{{v{} d{} m{}}} & \multicolumn{{2}}{{c|}}{{v{} d{} m{}}}\\
+\multicolumn{{2}}{{|c|}}{{\rule{{0pt}}{{2.4ex}}Mer.pass. {}}} & 
+\multicolumn{{2}}{{c|}}{{\(\nu\) {}$'$ \emph{{d}} {}$'$ m {}}} & 
+\multicolumn{{2}}{{c|}}{{\(\nu\) {}$'$ \emph{{d}} {}$'$ m {}}} & 
+\multicolumn{{2}}{{c|}}{{\(\nu\) {}$'$ \emph{{d}} {}$'$ m {}}} & 
+\multicolumn{{2}}{{c|}}{{\(\nu\) {}$'$ \emph{{d}} {}$'$ m {}}}\\
 \hline
 \multicolumn{{10}}{{c}}{{}}\\
 '''.format(ariestransit(date+timedelta(days=1)),RAc_v,Dc_v,mag_v,RAc_m,Dc_m,mag_m,RAc_j,Dc_j,mag_j,RAc_s,Dc_s,mag_s)
@@ -480,17 +492,17 @@ def planetstabm(date, ts):
                 tab = tab + line
                 h += 1
 
-        RAc_v, Dc_v = vdm_Venus(date)
+        mag_v, mag_m, mag_j, mag_s = magnitudes(date)   # magnitudes from Ephem
+        RAc_v, Dc_v, mag_v = vdm_Venus(date)
         RAc_m, Dc_m = vdm_Mars(date)
-        RAc_j, Dc_j = vdm_Jupiter(date)
+        RAc_j, Dc_j, mag_j = vdm_Jupiter(date)
         RAc_s, Dc_s = vdm_Saturn(date)
-        mag_v, mag_m, mag_j, mag_s = magnitudes(date)
         tab = tab + r'''\cmidrule{{1-2}} \cmidrule{{4-5}} \cmidrule{{7-8}} \cmidrule{{10-11}} \cmidrule{{13-14}}
-\multicolumn{{2}}{{c}}{{\footnotesize{{Mer.pass.:{}}}}} && 
-\multicolumn{{2}}{{c}}{{\footnotesize{{v{} d{} m{}}}}} && 
-\multicolumn{{2}}{{c}}{{\footnotesize{{v{} d{} m{}}}}} && 
-\multicolumn{{2}}{{c}}{{\footnotesize{{v{} d{} m{}}}}} && 
-\multicolumn{{2}}{{c}}{{\footnotesize{{v{} d{} m{}}}}}\\
+\multicolumn{{2}}{{c}}{{\footnotesize{{Mer.pass. {}}}}} && 
+\multicolumn{{2}}{{c}}{{\footnotesize{{\(\nu\){}$'$ \emph{{d}}{}$'$ m{}}}}} && 
+\multicolumn{{2}}{{c}}{{\footnotesize{{\(\nu\){}$'$ \emph{{d}}{}$'$ m{}}}}} && 
+\multicolumn{{2}}{{c}}{{\footnotesize{{\(\nu\){}$'$ \emph{{d}}{}$'$ m{}}}}} && 
+\multicolumn{{2}}{{c}}{{\footnotesize{{\(\nu\){}$'$ \emph{{d}}{}$'$ m{}}}}}\\
 \cmidrule{{1-2}} \cmidrule{{4-5}} \cmidrule{{7-8}} \cmidrule{{10-11}} \cmidrule{{13-14}}
 '''.format(ariestransit(date+timedelta(days=1)),RAc_v,Dc_v,mag_v,RAc_m,Dc_m,mag_m,RAc_j,Dc_j,mag_j,RAc_s,Dc_s,mag_s)
         if n < 2:
@@ -631,9 +643,10 @@ def sunmoontab(date, ts):
     n = 0
     while n < 3:
         tab = tab + r'''\hline
-\multicolumn{{1}}{{|c|}}{{\rule{{0pt}}{{2.6ex}}\textbf{{{}}}}} &\multicolumn{{1}}{{c}}{{\textbf{{GHA}}}} & \multicolumn{{1}}{{c|}}{{\textbf{{Dec}}}}  & \multicolumn{{1}}{{c}}{{\textbf{{GHA}}}} & \multicolumn{{1}}{{c}}{{\textbf{{\(\nu\)}}}} & \multicolumn{{1}}{{c}}{{\textbf{{Dec}}}} & \multicolumn{{1}}{{c}}{{\textbf{{d}}}} & \multicolumn{{1}}{{c|}}{{\textbf{{HP}}}}\\
+\multicolumn{{1}}{{|c|}}{{\rule{{0pt}}{{2.6ex}}\textbf{{{}}}}} &\multicolumn{{1}}{{c}}{{\textbf{{GHA}}}} & \multicolumn{{1}}{{c|}}{{\textbf{{Dec}}}}  & \multicolumn{{1}}{{c}}{{\textbf{{GHA}}}} & \multicolumn{{1}}{{c}}{{\(\nu\)}} & \multicolumn{{1}}{{c}}{{\textbf{{Dec}}}} & \multicolumn{{1}}{{c}}{{\textit{{d}}}} & \multicolumn{{1}}{{c|}}{{\textbf{{HP}}}}\\
 \hline\rule{{0pt}}{{2.6ex}}\noindent
 '''.format(date.strftime("%a"))
+        # note: inline math mode is used to typeset the greek character 'nu'
 
         if config.MULTIpr and config.WINpf:
             ghas = sunmoonlist[n][0]
@@ -704,7 +717,7 @@ def sunmoontab(date, ts):
         sds, dsm = sunSD(date)
         sdmm = moonSD(date)
         tab = tab + r'''\hline
-\rule{{0pt}}{{2.4ex}} & \multicolumn{{1}}{{c}}{{SD.={}}} & \multicolumn{{1}}{{c|}}{{d={}}} & \multicolumn{{5}}{{c|}}{{S.D.={}}}\\
+\rule{{0pt}}{{2.4ex}} & \multicolumn{{1}}{{c}}{{SD = {}$'$}} & \multicolumn{{1}}{{c|}}{{\textit{{d}} = {}$'$}} & \multicolumn{{5}}{{c|}}{{SD = {}$'$}}\\
 \hline
 '''.format(sds,dsm,sdmm)
         if n < 2:
@@ -738,7 +751,7 @@ def sunmoontabm(date, ts):
     n = 0
     while n < 3:
         tab = tab + r'''
-\multicolumn{{1}}{{c}}{{\textbf{{{}}}}} & \multicolumn{{1}}{{c}}{{\textbf{{GHA}}}} & \multicolumn{{1}}{{c}}{{\textbf{{Dec}}}} & & \multicolumn{{1}}{{c}}{{\textbf{{GHA}}}} & \multicolumn{{1}}{{c}}{{\textbf{{\(\nu\)}}}} & \multicolumn{{1}}{{c}}{{\textbf{{Dec}}}} & \multicolumn{{1}}{{c}}{{\textbf{{d}}}} & \multicolumn{{1}}{{c}}{{\textbf{{HP}}}}\\
+\multicolumn{{1}}{{c}}{{\textbf{{{}}}}} & \multicolumn{{1}}{{c}}{{\textbf{{GHA}}}} & \multicolumn{{1}}{{c}}{{\textbf{{Dec}}}} & & \multicolumn{{1}}{{c}}{{\textbf{{GHA}}}} & \multicolumn{{1}}{{c}}{{\(\nu\)}} & \multicolumn{{1}}{{c}}{{\textbf{{Dec}}}} & \multicolumn{{1}}{{c}}{{\textit{{d}}}} & \multicolumn{{1}}{{c}}{{\textbf{{HP}}}}\\
 '''.format(date.strftime("%a"))
 
         if config.MULTIpr and config.WINpf:
@@ -815,8 +828,8 @@ def sunmoontabm(date, ts):
         sds, dsm = sunSD(date)
         sdmm = moonSD(date)
         tab = tab + r'''\cmidrule{{2-3}} \cmidrule{{5-9}}
-\multicolumn{{1}}{{c}}{{}} & \multicolumn{{1}}{{c}}{{\footnotesize{{SD.={}}}}} & 
-\multicolumn{{1}}{{c}}{{\footnotesize{{d={}}}}} && \multicolumn{{5}}{{c}}{{\footnotesize{{S.D.={}}}}}\\
+\multicolumn{{1}}{{c}}{{}} & \multicolumn{{1}}{{c}}{{\footnotesize{{SD = {}$'$}}}} & 
+\multicolumn{{1}}{{c}}{{\footnotesize{{\textit{{d}} = {}$'$}}}} && \multicolumn{{5}}{{c}}{{\footnotesize{{SD = {}$'$}}}}\\
 \cmidrule{{2-3}} \cmidrule{{5-9}}
 '''.format(sds,dsm,sdmm)
         if n < 2:
@@ -1139,14 +1152,14 @@ def twilighttab(date, ts):
 #   page preparation
 #----------------------
 
-def doublepage(date, page1, pnum, ts):
+def doublepage(date, page1, ts):
     # creates a doublepage (3 days) of the nautical almanac
 
     # time delta values for the initial date&time...
-    dut1, deltat = getParams(date)
+    dut1, deltat = getDUT1(date)
     timeDUT1 = r"DUT1 = UT1-UTC = {:+.4f} sec\quad$\Delta$T = TT-UT1 = {:+.4f} sec".format(dut1, deltat)
 
-    dateZ = date + timedelta(days=pnum-1)       # last day
+    dateZ = date + timedelta(days=2)        # last day
     find_new_moon(date)     # required for 'moonage' and 'equation_of_time"
     page = ''
     if not(page1):
@@ -1205,7 +1218,8 @@ def doublepage(date, page1, pnum, ts):
     return page
 
 
-def pages(first_day, pnum, ts):
+def pages(first_day, dtp, ts):
+    # dtp = 0 if for entire year; = -1 if for entire month; else days to print
 
     if config.MULTIpr:
         # Windows & macOS defaults to "spawn"; Unix to "fork"
@@ -1216,27 +1230,60 @@ def pages(first_day, pnum, ts):
         global pool
         pool = mp.Pool(n)   # start 8 max. worker processes
 
-    # make 'pnum' doublepages beginning with first_day
     out = ''
     page1 = True
     pmth = ''
-    for i in range(pnum):
-        if pnum == 122:	# if Full Almanac for a year...
-            cmth = first_day.strftime("%b ")
+    dpp = 3         # 3 days per page
+    day1 = first_day
+
+    if dtp == 0:        # if entire year
+        year = first_day.year
+        yr = year
+        while year == yr:
+            cmth = day1.strftime("%b ")
+            day3 = day1 + timedelta(days=2)
             if cmth != pmth:
-                print()		# progress indicator - next month
+                print() # progress indicator - next month
                 #print(cmth, end='')
                 sys.stdout.write(cmth)	# next month
                 sys.stdout.flush()
+                pmth = cmth
             else:
                 sys.stdout.write('.')	# progress indicator
                 sys.stdout.flush()
-            pmth = cmth
-        out = out + doublepage(first_day,page1,pnum,ts)
-        page1 = False
-        first_day += timedelta(days=3)
-    if pnum == 122:	# if Full Almanac for a year...
-        print()		# newline to terminate progress indicator
+            out += doublepage(day1, page1, ts)
+            page1 = False
+            day1 += timedelta(days=3)
+            year = day1.year
+    elif dtp == -1:     # if entire month
+        mth = first_day.month
+        m = mth
+        while mth == m:
+            cmth = day1.strftime("%b ")
+            day3 = day1 + timedelta(days=2)
+            if cmth != pmth:
+                print() # progress indicator - next month
+                #print(cmth, end='')
+                sys.stdout.write(cmth)	# next month
+                sys.stdout.flush()
+                pmth = cmth
+            else:
+                sys.stdout.write('.')	# progress indicator
+                sys.stdout.flush()
+            out += doublepage(day1, page1, ts)
+            page1 = False
+            day1 += timedelta(days=3)
+            mth = day1.month
+    else:           # print 'dtp' days beginning with first_day
+        i = dtp   # don't decrement dtp
+        while i > 0:
+            out += doublepage(day1, page1, ts)
+            page1 = False
+            i -= 3
+            day1 += timedelta(days=3)
+
+    if dtp <= 0:        # if Full Almanac for a whole month/year...
+        print("\n")		# 2 x newline to terminate progress indicator
 
     if config.MULTIpr:
         pool.close()    # close all worker processes
@@ -1248,7 +1295,8 @@ def pages(first_day, pnum, ts):
 #   external entry point
 #--------------------------
 
-def almanac(first_day, pagenum, ts):
+def almanac(first_day, dtp, ts):
+    # dtp = 0 if for entire year; = -1 if for entire month; else days to print
 
     # make almanac starting from first_day
     global tm, bm, oddim, oddom
@@ -1311,7 +1359,8 @@ def almanac(first_day, pagenum, ts):
     alm = alm + r'''
 %\usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
-\usepackage{fontenc}'''
+\usepackage{fontenc}
+\usepackage{enumitem} % used to customize the {description} environment'''
 
     # to troubleshoot add "showframe, verbose," below:
     alm = alm + r'''
@@ -1368,16 +1417,26 @@ def almanac(first_day, pagenum, ts):
     alm = alm + r'''[{}]
     \textsc{{\huge The Nautical Almanac}}\\[{}]'''.format(vsep1,vsep2)
 
-    if pagenum == 122:
+    if dtp == 0:
         alm = alm + r'''
     \HRule \\[0.5cm]
     {{ \Huge \bfseries {}}}\\[0.2cm]
     \HRule \\'''.format(year)
+    elif dtp == -1:
+        alm = alm + r'''
+    \HRule \\[0.5cm]
+    {{ \Huge \bfseries {}}}\\[0.2cm]
+    \HRule \\'''.format(first_day.strftime("%B %Y"))
+    elif dtp > 1:
+        alm = alm + r'''
+    \HRule \\[0.5cm]
+    {{ \Huge \bfseries {}}}\\[0.2cm]
+    \HRule \\'''.format(fmtdates(first_day,first_day+timedelta(days=dtp-1)))
     else:
         alm = alm + r'''
     \HRule \\[0.5cm]
-    {{ \Huge \bfseries from {}.{}.{}}}\\[0.2cm]
-    \HRule \\'''.format(day,mth,year)
+    {{ \Huge \bfseries {}}}\\[0.2cm]
+    \HRule \\'''.format(fmtdate(first_day))
 
     alm = alm + r'''
     \begin{center}\begin{tabular}[t]{rl}
@@ -1389,16 +1448,16 @@ def almanac(first_day, pagenum, ts):
     {\large \today}
     \HRule \\[0.2cm]
     \end{center}
-    \begin{description}\footnotesize
+    \begin{description}[leftmargin=5.5em,style=nextline]\footnotesize
     \item[Disclaimer:] These are computer generated tables - use them at your own risk.
     The accuracy has been randomly checked with JPL HORIZONS System, but cannot be guaranteed.
-    This means I cannot be held liable if you get lost on the oceans because of errors in this publication.
+    The author claims no liability for any consequences arising from use of these tables.
     Besides, this publication only contains the 'daily pages' of the Nautical Almanac: an official version of the Nautical Almanac is indispensable.
     \end{description}
 \end{titlepage}
 \restoregeometry    % so it does not affect the rest of the pages'''
 
-    alm = alm + pages(first_day,pagenum,ts)
+    alm = alm + pages(first_day,dtp,ts)
     alm = alm + '''
 \end{document}'''
     return alm

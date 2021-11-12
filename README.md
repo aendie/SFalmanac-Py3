@@ -1,30 +1,20 @@
 # SFalmanac-Py3
 
-SFalmanac-Py3 is a Python 3 script that creates the daily pages of the Nautical Almanac **using the UT1 timescale** :smiley:. Official Nautical Almanacs employ a UT timescale (equivalent to UT1).
+SFalmanac-Py3 is a Python 3 script that creates the daily pages of the Nautical Almanac **using the UT timescale**, as do Official Nautical Almanacs (this is equivalent to UT1).
 These are tables that are needed for celestial navigation with a sextant. Although you are strongly advised to purchase the official Nautical Almanac, this program will reproduce the tables with no warranty or guarantee of accuracy.
 
-SFalmanac-Py3 was developed with the intention of having identical output format as Pyalmanac-Py3. As opposed to the older Ephem astronomy library, the intention was for it to be based entirely on the newer Skyfield astronomical library: https://rhodesmill.org/skyfield/, however Ephem is still required to calculate the planet magnitudes. SFalmanac uses the star database in Skyfield, which is based on data from the Hipparcos Catalogue.
+SFalmanac-Py3 was originally developed with the intention of having identical output format as Pyalmanac-Py3. As opposed to the older Ephem astronomy library, the intention was for it to be based entirely on the newer Skyfield astronomical library: https://rhodesmill.org/skyfield/, however Ephem is still required to calculate some planet magnitudes. SFalmanac uses the star database in Skyfield, which is based on data from the Hipparcos Catalogue.
 
-**OUTDATED (now that a multiprocessing verson exists):** The principal disadvantage is that calculating twilight (actual, civil and nautical sunrise/sunset) and moonrise/moonset is extremely slow. As a consequence of this a new hybrid version is available that is four times faster. (The hybrid version uses Ephem to calculate twilight and moonrise/moonset with only a minimal loss of accuracy.)
+SFalmanac-Py3 now employs the capability of multiprocessing (if your processor has multiple cores), making it acceptably fast. Single-processing is also optionally available in case one wants to compare the results. (The justification for Skyalmanac, a hybrid version that uses Ephem instead for the slow calcalculations, is no longer valid now that multiprocessing is available.)
 
-**NOTE: the Python Package Index (PyPI) edition is here:** https://pypi.org/project/sfalmanac/  
-**Users are encouraged to install the PyPI edition instead.**  
+**Users are encouraged to install the Python Package Index (PyPI) edition to be found here:**
+https://pypi.org/project/sfalmanac/  
+
 NOTE: a 100% [Ephem](https://rhodesmill.org/pyephem/)-based version of SFalmanac is available here:
 https://github.com/aendie/Pyalmanac-Py3  
-NOTE: the faster hybrid version is available here: 
-https://github.com/aendie/SkyAlmanac-Py3
-
-An aim of this development was to maintain:
-
-* **identical PDF output formatting with a similar control program**  
-	 It is then possible to display both generated tables (using Ephem or Skyfield astronomical libraries)
-	 and compare what has changed by flipping between the two tabs in Adobe Acrobat Reader DC.
-	 Anything that has changed flashes, thereby drawing your attention to it.
-	 This crude and simple method is quite effective in highlihgting data that
-	 might need further attention.
 
 The results have been crosschecked with USNO data to some extent.  
-(However, constructive feedback is always appreciated.)
+(Nevertheless, constructive feedback is always appreciated.)
 
 **UPDATE: Nov 2019**
 
@@ -116,16 +106,38 @@ One command line argument may be appended to the run command:
 
 de430t and de440 ephemerides have been added to *config.py*.
 
+**UPDATE: Nov 2021**
+
+* Enhanced User Interface includes the possibility to generate tables starting at any valid date, or for any month (within -12/+11 months from today).
+* This checks if there is an Internet connection before attempting to update the Earth Orientation Parameters (EOP) from IERS.
+* Minor cosmetic improvements ('d'-correction in italics; greek 'nu' replaces 'v'-correction; Minutes-symbol added to SD and d)
+
+Increased accuracy due to the following minor improvements:
+* Moon phase (percent illumination) is based on midnight (as opposed to midday)
+* Star positions are based on midnight (as opposed to midday)
+* Sun's SD (semi-diameter) is based on midnight (as opposed to mid-day)
+* Moon v and d for hour ‘n’ are based on “hour ‘n+1’ minus hour ‘n’” as opposed to “hour ‘n’ + 30 minutes minus hour ‘n’ – 30 minutes”
+* Moon HP is based on a “volumetric mean radius of earth = 6371.0” as opposed to an “equatorial radius of earth = 6378.0 km”
+* Moon SD (semi-diameter) is based on a “volumetric mean radius of moon = 1737.4 km” as opposed to an “equatorial radius of moon = 1738.1 km”
+* Planet magnitudes for Venus and Jupiter are obtained from Skyfield (>= 1.26), despite it still being a prototype function
+
+The PDF filenames have been revised (again):
+
+* NAmod_\<starting date or month or year\>.pdf: for Nautical Almanacs in modern style
+* STmod_\<starting date or month or year\>.pdf: for Sun Tables in modern style
+* NAtrad_\<starting date or month or year\>.pdf: for Nautical Almanacs in traditional style
+* STtrad_\<starting date or month or year\>.pdf: for Sun Tables in traditional style
+
 ## Requirements
 
 &emsp;Most of the computation is done by the free Skyfield library.  
-&emsp;Typesetting is typically done by MiKTeX or TeX Live.  
-&emsp;These need to be installed:
+&emsp;Typesetting is done typically by MiKTeX or TeX Live.  
+&emsp;Here are the requirements/recommendations:
 
-* Python v3.4 or higher (the latest version is recommended)
-* Skyfield 1.35 (see the Skyfield Changelog)
-* Pandas >= 1.0 (to load the Hipparcos catalog; tested: 1.0.3 and 1.1.4)
-* Ephem >= 3.7.6 (required for planet magnitudes)
+* Python v3.4 or higher (v3.9.x is recommended)
+* Skyfield >= 1.31 (the latest is recommended; see the Skyfield Changelog)
+* Pandas >= 1.0 (to decode the Hipparcos catalog; tested: 1.0.3 and 1.1.4)
+* Ephem >= 3.7.6 (required for some planet magnitudes)
 * MiKTeX&ensp;or&ensp;TeX Live
 
 ## Files required in the execution folder:

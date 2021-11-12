@@ -23,6 +23,7 @@ import datetime
 import time         # 00000 - stopwatch elements
 import math
 from os import path
+import socket
 
 # Third party imports
 from skyfield import VERSION
@@ -31,8 +32,7 @@ from skyfield.api import Topos, Star
 from skyfield import almanac
 from skyfield.nutationlib import iau2000b
 from skyfield.data import hipparcos
-###from skyfield.units import Distance
-###from skyfield.units import Angle
+from skyfield.magnitudelib import planetary_magnitude
 import numpy as np
 
 # Local application imports
@@ -43,6 +43,7 @@ import config
 #----------------------
 
 hour_of_day = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+next_hour_of_day = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 degree_sign= u'\N{DEGREE SIGN}'
 
 def compareVersion(versions1, version2):
@@ -57,6 +58,16 @@ def compareVersion(versions1, version2):
             return -1
     return 0
 
+def isConnected():
+    try:
+        # connect to the host -- tells us if the host is actually reachable
+        sock = socket.create_connection(("www.iers.org", 80))
+        if sock is not None: sock.close
+        return True
+    except OSError:
+        pass
+    return False
+
 def init_sf(spad):
     global ts, eph, earth, moon, sun, venus, mars, jupiter, saturn, df
     load = Loader(spad)         # spad = folder to store the downloaded files
@@ -67,11 +78,16 @@ def init_sf(spad):
         if compareVersion(VERSION, "1.31") >= 0:
             if path.isfile(dfIERS):
                 if load.days_old(EOPdf) > float(config.ageIERS):
-                    load.download(EOPdf)
+                    if isConnected(): load.download(EOPdf)
+                    else: print("NOTE: no Internet connection... using existing '{}'".format(EOPdf))
                 ts = load.timescale(builtin=False)	# timescale object
             else:
-                load.download(EOPdf)
-                ts = load.timescale(builtin=False)	# timescale object
+                if isConnected():
+                    load.download(EOPdf)
+                    ts = load.timescale(builtin=False)	# timescale object
+                else:
+                    print("NOTE: no Internet connection... using built-in UT1-tables")
+                    ts = load.timescale()	# timescale object with built-in UT1-tables
         else:
             ts = load.timescale()	# timescale object with built-in UT1-tables
     else:
@@ -263,7 +279,7 @@ def rise_set_error(y, lats, t0):
 #   Miscellaneous
 #-------------------------------
 
-def getParams(d):
+def getDUT1(d):
     # obtain calculation parameters
     t = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
     return t.dut1, t.delta_t
@@ -295,11 +311,13 @@ def sunGHA(d):              # used in sunmoontab(m)
 
 def sunSD(d):               # used in sunmoontab(m)
     # compute semi-diameter of sun and sun's declination change per hour (in minutes)
-    t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)
-    position = earth.at(t12).observe(sun)
+    t00 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
+    #t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)
+    position = earth.at(t00).observe(sun)
     distance = position.apparent().radec(epoch='date')[2]
     dist_km = distance.km
-    sds = math.degrees(math.atan(695500.0 / dist_km))   # radius of sun = 695500 km
+# OLD:  sds = math.degrees(math.atan(695500.0 / dist_km))   # radius of sun = 695500 km
+    sds = math.degrees(math.atan(695700.0 / dist_km))   # volumetric mean radius of sun = 695700 km
     sdsm = "{:0.1f}".format(sds * 60)   # convert to minutes of arc
 
     t0 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
@@ -314,11 +332,13 @@ def sunSD(d):               # used in sunmoontab(m)
 
 def moonSD(d):              # used in sunmoontab(m)
     # compute semi-diameter of moon (in minutes)
-    t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)
-    position = earth.at(t12).observe(moon)
+    t00 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
+    #t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)
+    position = earth.at(t00).observe(moon)
     distance = position.apparent().radec(epoch='date')[2]
     dist_km = distance.km
-    sdm = math.degrees(math.atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+# OLD: sdm = math.degrees(math.atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+    sdm = math.degrees(math.atan(1737.4/dist_km))   # volumetric mean radius of moon = 1737.4 km
     sdmm = "{:0.1f}".format(sdm * 60)  # convert to minutes of arc
     return sdmm
 
@@ -362,7 +382,8 @@ def moonGHA(d, round2seconds = False):  # used in sunmoontab(m) & equationtab (i
         decm[i] = fmtdeg(dec.degrees[i],2)
         degm[i] = dec.degrees[i]
         dist_km = distance.km[i]
-        HP = math.degrees(math.atan(6378.0/dist_km))	# radius of earth = 6378.0 km
+# OLD:  HP = math.degrees(math.atan(6378.0/dist_km))	# radius of earth = 6378.0 km
+        HP = math.degrees(math.atan(6371.0/dist_km))	# volumetric mean radius of earth = 6371.0 km
         HPm[i] = "{:0.1f}'".format(HP * 60)     # convert to minutes of arc
 
     # degm has been added for the sunmoontab function
@@ -371,17 +392,21 @@ def moonGHA(d, round2seconds = False):  # used in sunmoontab(m) & equationtab (i
 
     return gham, decm, degm, HPm, GHAupper, GHAlower, ghaSoD, ghaEoD
 
-def moonVD(d0, d):           # used in sunmoontab(m)
-    # first value required is from 23:30 on the previous day...
-    t0 = ts.ut1(d0.year, d0.month, d0.day, 23, 30, 0)
+def moonVD(d00, d):           # used in sunmoontab(m)
+# OLD:  # first value required is from 23:30 on the previous day...
+# OLD:  t0 = ts.ut1(d00.year, d00.month, d00.day, 23, 30, 0)
+    # first value required is at 00:00 on the current day...
+    t0 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
     pos0 = earth.at(t0).observe(moon)
     ra0 = pos0.apparent().radec(epoch='date')[0]
     dec0 = pos0.apparent().radec(epoch='date')[1]
     V0 = gha2deg(t0.gast, ra0.hours)
     D0 = dec0.degrees
 
-    # ...then 24 values at hourly intervals from 23:30 onwards
-    t = ts.ut1(d.year, d.month, d.day, hour_of_day, 30, 0)
+# OLD:  # ...then 24 values at hourly intervals from 23:30 onwards
+# OLD:  t = ts.ut1(d.year, d.month, d.day, hour_of_day, 30, 0)
+    # ...then 24 values at hourly intervals from 00:00 onwards
+    t = ts.ut1(d.year, d.month, d.day, next_hour_of_day, 0, 0)
     position = earth.at(t).observe(moon)
     ra = position.apparent().radec(epoch='date')[0]
     dec = position.apparent().radec(epoch='date')[1]
@@ -391,8 +416,7 @@ def moonVD(d0, d):           # used in sunmoontab(m)
     for i in range(len(dec.degrees)):
         V1 = gha2deg(t[i].gast, ra.hours[i])
         Vdelta = V1 - V0
-        if Vdelta < 0:
-            Vdelta += 360
+        if Vdelta < 0: Vdelta += 360
         Vdm = (Vdelta-(14.0+(19.0/60.0))) * 60	# subtract 14:19:00
         moonVm[i] = "{:0.1f}'".format(Vdm)
         D1 = dec.degrees[i]
@@ -474,12 +498,12 @@ def saturnGHA(d):           # used in planetstab(m)
     return ghas, decs, degs
 
 def vdm_Venus(d):           # used in planetstab(m)
-    # compute v (GHA correction), d (Declination correction)
-    # NOTE: m (magnitude of planet) comes from alma_ephem.py
+    # compute v (GHA correction), d (Declination correction), m (magnitude of planet)
     t0 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
     position0 = earth.at(t0).observe(venus)
     ra0 = position0.apparent().radec(epoch='date')[0]	# RA
     dec0 = position0.apparent().radec(epoch='date')[1]	# declination
+    mag = "{:0.2f}".format(planetary_magnitude(position0))  # planetary magnitude
 
     t1 = ts.ut1(d.year, d.month, d.day, 1, 0, 0)
     position1 = earth.at(t1).observe(venus)
@@ -492,7 +516,7 @@ def vdm_Venus(d):           # used in planetstab(m)
     RAcorrm = "{:0.1f}".format(sha * 60)	# convert to minutes of arc
     Dcorr = dec1.degrees - dec0.degrees
     Dcorrm = "{:0.1f}".format(Dcorr * 60)	# convert to minutes of arc
-    return RAcorrm, Dcorrm
+    return RAcorrm, Dcorrm, mag
 
 def vdm_Mars(d):            # used in planetstab(m)
     # compute v (GHA correction), d (Declination correction)
@@ -516,12 +540,12 @@ def vdm_Mars(d):            # used in planetstab(m)
     return RAcorrm, Dcorrm
 
 def vdm_Jupiter(d):         # used in planetstab(m)
-    # compute v (GHA correction), d (Declination correction)
-    # NOTE: m (magnitude of planet) comes from alma_ephem.py
+    # compute v (GHA correction), d (Declination correction), m (magnitude of planet)
     t0 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
     position0 = earth.at(t0).observe(jupiter)
     ra0 = position0.apparent().radec(epoch='date')[0]	# RA
     dec0 = position0.apparent().radec(epoch='date')[1]	# declination
+    mag = "{:0.2f}".format(planetary_magnitude(position0))  # planetary magnitude
 
     t1 = ts.ut1(d.year, d.month, d.day, 1, 0, 0)
     position1 = earth.at(t1).observe(jupiter)
@@ -534,7 +558,7 @@ def vdm_Jupiter(d):         # used in planetstab(m)
     RAcorrm = "{:0.1f}".format(sha * 60)	# convert to minutes of arc
     Dcorr = dec1.degrees - dec0.degrees
     Dcorrm = "{:0.1f}".format(Dcorr * 60)	# convert to minutes of arc
-    return RAcorrm, Dcorrm
+    return RAcorrm, Dcorrm, mag
 
 def vdm_Saturn(d):          # used in planetstab(m)
     # compute v (GHA correction), d (Declination correction)
@@ -684,7 +708,8 @@ def planet_transit(planet_name):
 def stellar_info(d):        # used in starstab
     # returns a list of lists with name, SHA and Dec all navigational stars for epoch of date.
 
-    t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)  #calculate at noon
+    t00 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)   #calculate at midnight
+    #t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)  #calculate at noon
     out = []
 
     for line in db.strip().split('\n'):
@@ -693,7 +718,7 @@ def stellar_info(d):        # used in starstab
         HIPnum = line[x1+1:]
 
         star = Star.from_dataframe(df.loc[int(HIPnum)])
-        astrometric = earth.at(t12).observe(star).apparent()
+        astrometric = earth.at(t00).observe(star).apparent()
         ra, dec, distance = astrometric.radec(epoch='date')
 
         sha  = fmtgha(0, ra.hours)
@@ -933,7 +958,8 @@ def getHorizon(t):
     position = earth.at(t).observe(moon)   # at noontime (for daily average distance)
     distance = position.apparent().radec(epoch='date')[2]
     dist_km = distance.km
-    sdm = math.degrees(math.atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+# OLD: sdm = math.degrees(math.atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+    sdm = math.degrees(math.atan(1737.4/dist_km))   # volumetric mean radius of moon = 1737.4 km
     horizon = sdm + 0.5666667	# moon's equatorial radius + 34' (atmospheric refraction)
 
     return horizon
@@ -1620,8 +1646,9 @@ def moonphase(d):           # used in twilighttab (section 3)
     # phase is calculated at noon
     dt += datetime.timedelta(hours=12)
 
-    t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)
-    phase_angle = almanac.phase_angle(eph, 'moon', t12)
+    t00 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
+    #t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)
+    phase_angle = almanac.phase_angle(eph, 'moon', t00)     # OLD: t12
     elong = phase_angle.radians
 
     # phase_angle.degrees is ...
@@ -1642,9 +1669,10 @@ def moonphase(d):           # used in twilighttab (section 3)
 def moonage(d, d1):         # used in twilighttab (section 3)
     # return the moon's 'age' and percent illuminated
 
-    # percent illumination is calculated at noon
-    t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)
-    phase_angle = almanac.phase_angle(eph, 'moon', t12)
+    # percent illumination is calculated at midnight
+    t00 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
+    #t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)
+    phase_angle = almanac.phase_angle(eph, 'moon', t00)     # OLD: t12
     pctrad = 50 * (1.0 + math.cos(phase_angle.radians))
     pct = "{:.0f}".format(pctrad)
 
@@ -1670,7 +1698,7 @@ def equation_of_time(d, d1, UpperList, LowerList, extras, round2seconds = False)
     # the moon's transit-, antitransit-time, age and percent illumination.
     # (Equation of Time = Mean solar time - Apparent solar time)
 
-    t00 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
+    t00 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)       # EoT at 00h
     position = earth.at(t00).observe(sun)
     ra = position.apparent().radec(epoch='date')[0]
     gha00 = gha2deg(t00.gast, ra.hours)
@@ -1678,8 +1706,7 @@ def equation_of_time(d, d1, UpperList, LowerList, extras, round2seconds = False)
     if gha00 <= 180:
         eqt00 = r"\colorbox{{lightgray!60}}{{{}}}".format(eqt00)
 
-    # percent illumination is calculated at noon
-    t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)
+    t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)      # EoT at 12h
     position = earth.at(t12).observe(sun)
     ra = position.apparent().radec(epoch='date')[0]
     gha12 = gha2deg(t12.gast, ra.hours)
@@ -1713,7 +1740,8 @@ def equation_of_time(d, d1, UpperList, LowerList, extras, round2seconds = False)
     if not(extras):     # omit 'age' and 'pct'
         return eqt00,eqt12,mpa12,mp_upper,mp_lower
 
-    phase_angle = almanac.phase_angle(eph, 'moon', t12)
+    # percent illumination is calculated at midnight
+    phase_angle = almanac.phase_angle(eph, 'moon', t00)     # OLD: t12
     pctrad = 50 * (1.0 + math.cos(phase_angle.radians))
     pct = "{:.0f}".format(pctrad)
 
@@ -1811,10 +1839,14 @@ def find_new_moon(d):       # used in doublepage
     WaxingMoon = None
     # note: the python datetimes above are timezone 'aware' (not 'naive')
 
-    # search from 30 days earlier than noon... till noon on this day
+##    search from 30 days earlier than noon... till noon on this day
+##    t0 = ts.utc(d0.year, d0.month, d0.day, 12, 0, 0)
+##    t1 = ts.utc(d.year, d.month, d.day, 12, 0, 0)
+
+    # search from 30 days earlier than midnight... till midnight on this day
     d0 = d - datetime.timedelta(days=30)
-    t0 = ts.utc(d0.year, d0.month, d0.day, 12, 0, 0)
-    t1 = ts.utc(d.year, d.month, d.day, 12, 0, 0)
+    t0 = ts.utc(d0.year, d0.month, d0.day, 0, 0, 0)
+    t1 = ts.utc(d.year, d.month, d.day, 0, 0, 0)
     start00 = time.time()                   # 00000
     t, y = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
     config.stopwatch += time.time()-start00 # 00000

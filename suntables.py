@@ -23,12 +23,12 @@
 # https://docs.python.org/3/whatsnew/3.0.html#pep-3101-a-new-approach-to-string-formatting
 
 # Standard library imports
-import datetime		# required for .timedelta()
+from datetime import datetime, timedelta
 from math import copysign as copysign
 
 # Local application imports
 import config
-from alma_skyfield import *
+import alma_skyfield as alma_skyfield
 
 #----------------------
 #   internal methods
@@ -107,32 +107,39 @@ def NSdecl(deg, hr, printNS, printDEG, modernFMT):
     #print("sdeg: ", sdeg)
     return sdeg
 
+def fmtdate(d):
+    if config.pgsz == 'Letter': return d.strftime("%m/%d/%Y")
+    return d.strftime("%d.%m.%Y")
+
+def fmtdates(d1,d2):
+    if config.pgsz == 'Letter': return d1.strftime("%m/%d/%Y") + " - " + d2.strftime("%m/%d/%Y")
+    return d1.strftime("%d.%m.%Y") + " - " + d2.strftime("%d.%m.%Y")
+
 # >>>>>>>>>>>>>>>>>>>>>>>>
-def suntab(date):
-    # generates LaTeX table for sun only (traditional)
+def suntab(date, n):
+    # generates LaTeX table for sun only (traditional styla)
     tab = r'''\noindent
 \begin{tabular*}{0.2\textwidth}[t]{@{\extracolsep{\fill}}|c|rr|}
 '''
-    n = 0
-    while n < 3:
+    while n > 0:
         tab = tab + r'''\hline
 \multicolumn{{1}}{{|c|}}{{\rule{{0pt}}{{2.6ex}}\textbf{{{}}}}} & \multicolumn{{1}}{{c}}{{\textbf{{GHA}}}} & \multicolumn{{1}}{{c|}}{{\textbf{{Dec}}}}\\
 \hline\rule{{0pt}}{{2.6ex}}\noindent
 '''.format(date.strftime("%d"))
 
-        ghas, decs, degs = sunGHA(date)
+        ghas, decs, degs = alma_skyfield.sunGHA(date)
         h = 0
 
-        if config.decf != '+':	# USNO format for Declination
+        if config.decf != '+':  # USNO format for Declination
             while h < 24:
                 if h > 0:
                     prevDEC = degs[h-1]
                 else:
-                    prevDEC = degs[0]		# hour -1 = hour 0
+                    prevDEC = degs[0]       # hour -1 = hour 0
                 if h < 23:
                     nextDEC = degs[h+1]
                 else:
-                    nextDEC = degs[23]	# hour 24 = hour 23
+                    nextDEC = degs[23]      # hour 24 = hour 23
                 
                 # format declination checking for hemisphere change
                 printNS, printDEG = declCompare(prevDEC,degs[h],nextDEC,h)
@@ -158,23 +165,25 @@ def suntab(date):
                 tab = tab + line + lineterminator
                 h += 1
 
-        sds, dsm = sunSD(date)
+        sds, dsm = alma_skyfield.sunSD(date)
         tab = tab + r'''\hline
-\rule{{0pt}}{{2.4ex}} & \multicolumn{{1}}{{c}}{{SD.={}}} & \multicolumn{{1}}{{c|}}{{d={}}}\\
+\rule{{0pt}}{{2.4ex}} & 
+\multicolumn{{1}}{{c}}{{SD={}$'$}} & 
+\multicolumn{{1}}{{c|}}{{\textit{{d}}\,=\,{}$'$}}\\
 \hline
 '''.format(sds,dsm)
-        if n < 2:
+        if n > 1:
             # add space between tables...
             tab = tab + r'''\multicolumn{1}{c}{}\\[-0.5ex]'''
-        n += 1
-        date += datetime.timedelta(days=1)
+        n -= 1
+        date += timedelta(days=1)
 
     tab = tab + r'''\end{tabular*}'''
     return tab
 
 # >>>>>>>>>>>>>>>>>>>>>>>>
-def suntabm(date):
-    # generates LaTeX table for sun only (modern)
+def suntabm(date, n):
+    # generates LaTeX table for sun only (modern style)
     if config.decf != '+':	# USNO format for Declination
         colsep = "4pt"
     else:
@@ -185,28 +194,28 @@ def suntabm(date):
 \setlength{{\tabcolsep}}{{{}}}
 \begin{{tabular}}[t]{{crr}}'''.format(colsep)
 
-    n = 0
-    while n < 3:
+    while n > 0:
+##        print("n = {}".format(n))
         tab = tab + r'''
 \multicolumn{{1}}{{c}}{{\footnotesize{{\textbf{{{}}}}}}} & \multicolumn{{1}}{{c}}{{\footnotesize{{\textbf{{GHA}}}}}} & \multicolumn{{1}}{{c}}{{\footnotesize{{\textbf{{Dec}}}}}}\\
 \cmidrule{{1-3}}
 '''.format(date.strftime("%d"))
 
-        ghas, decs, degs = sunGHA(date)
+        ghas, decs, degs = alma_skyfield.sunGHA(date)
         h = 0
 
-        if config.decf != '+':	# USNO format for Declination
+        if config.decf != '+':  # USNO format for Declination
             while h < 24:
                 band = int(h/6)
                 group = band % 2
                 if h > 0:
                     prevDEC = degs[h-1]
                 else:
-                    prevDEC = degs[0]		# hour -1 = hour 0
+                    prevDEC = degs[0]       # hour -1 = hour 0
                 if h < 23:
                     nextDEC = degs[h+1]
                 else:
-                    nextDEC = degs[23]	# hour 24 = hour 23
+                    nextDEC = degs[23]      # hour 24 = hour 23
                 
                 # format declination checking for hemisphere change
                 printNS, printDEG = declCompare(prevDEC,degs[h],nextDEC,h)
@@ -240,16 +249,17 @@ def suntabm(date):
                 tab = tab + line + lineterminator
                 h += 1
 
-        sds, dsm = sunSD(date)
-        tab = tab + r'''\cmidrule{{2-3}}
-& \multicolumn{{1}}{{c}}{{\footnotesize{{SD.={}}}}} & \multicolumn{{1}}{{c}}{{\footnotesize{{d={}}}}}\\
+        sds, dsm = alma_skyfield.sunSD(date)
+        tab = tab + r'''\cmidrule{{2-3}} &
+\multicolumn{{1}}{{c}}{{\scriptsize{{SD\,=\,{}$'$}}}} & \multicolumn{{1}}{{c}}{{\footnotesize{{\textit{{d}}\,=\,{}$'$}}}}\\
 \cmidrule{{2-3}}'''.format(sds,dsm)
-        if n < 2:
+        # note: '\,' inserts a .166667em space in text mode 
+        if n > 1:
             # add space between tables...
             tab = tab + r'''
 \multicolumn{3}{c}{}\\[-1.5ex]'''
-        n += 1
-        date += datetime.timedelta(days=1)
+        n -= 1
+        date += timedelta(days=1)
     tab = tab + r'''
 \end{tabular}'''
     return tab
@@ -258,11 +268,17 @@ def suntabm(date):
 #   page preparation
 #----------------------
 
-def page(date):
-
+def page(date, dpp=15):
     # time delta values for the initial date&time...
-    dut1, deltat = getParams(date)
-    timedelta = r"DUT1 = UT1-UTC = {:+.4f} sec\quad$\Delta$T = TT-UT1 = {:+.4f} sec".format(dut1, deltat)
+    dut1, deltat = alma_skyfield.getDUT1(date)
+    timeDUT1 = r"DUT1 = UT1-UTC = {:+.4f} sec\quad$\Delta$T = TT-UT1 = {:+.4f} sec".format(dut1, deltat)
+
+    if dpp > 1:
+        str2 = r'''\textbf{{{} to {} UT}}
+'''.format(date.strftime("%Y %B %d"),(date+timedelta(days=dpp-1)).strftime("%b. %d"))
+    else:
+        str2 = r'''\textbf{{{} UT}}
+'''.format(date.strftime("%Y %B %d"))
 
     # creates a page(15 days) of the Sun almanac
     page = r'''
@@ -271,49 +287,78 @@ def page(date):
 \sffamily
 \noindent
 \begin{{flushleft}}     % required so that \par works
-{{\footnotesize {}}}\hfill\textbf{{{} to {} UT}}
+{{\footnotesize {}}}\hfill{}
 \end{{flushleft}}\par
 \begin{{scriptsize}}
-'''.format(timedelta, date.strftime("%Y %B %d"), (date + datetime.timedelta(days=14)).strftime("%b. %d"))
+'''.format(timeDUT1, str2)
+
     if config.tbls == "m":
-        page = page + suntabm(date)
-        page = page + r'''\quad
+        while dpp > 0:
+            page += suntabm(date,min(3,dpp))
+            date += timedelta(days=3)
+            dpp -= 3
+            if dpp > 0: page = page + r'''\quad
 '''
-        page = page + suntabm(date + datetime.timedelta(days=3))
-        page = page + r'''\quad
-'''
-        page = page + suntabm(date + datetime.timedelta(days=6))
-        page = page + r'''\quad
-'''
-        page = page + suntabm(date + datetime.timedelta(days=9))
-        page = page + r'''\quad
-'''
-        page = page + suntabm(date + datetime.timedelta(days=12))
     else:
-        page = page + suntab(date)
-        page = page + suntab(date + datetime.timedelta(days=3))
-        page = page + suntab(date + datetime.timedelta(days=6))
-        page = page + suntab(date + datetime.timedelta(days=9))
-        page = page + suntab(date + datetime.timedelta(days=12))
+        while dpp > 0:
+            page += suntab(date,min(3,dpp))
+            date += timedelta(days=3)
+            dpp -= 3
+
     # to avoid "Overfull \hbox" messages, leave a paragraph end before the end of a size change. (This may only apply to tabular* table style) See lines below...
     page = page + r'''
 
 \end{scriptsize}'''
     return page
 
-def pages(first_day, pnum):
-    # make 'pnum' pages beginning with first_day
+def pages(first_day, dtp):
+    # dtp = 0 if for entire year; = -1 if for entire month; else days to print
+
     out = ''
-    for i in range(pnum):
-        out = out + page(first_day)
-        first_day += datetime.timedelta(days=15)
+
+    if dtp == 0:       # if entire year
+        year = first_day.year
+        yr = year
+        dpp = 15      # 15 days per page maximum
+        day1 = first_day
+        while year == yr:
+            day15 = day1 + timedelta(days=14)
+            if day15.year != yr:
+                dpp -= day15.day
+                if dpp <= 0: return out
+            out += page(day1, dpp)
+            day1 += timedelta(days=15)
+            year = day1.year
+    elif dtp == -1:    # if entire month
+        mth = first_day.month
+        m = mth
+        dpp = 15      # 15 days per page maximum
+        day1 = first_day
+        while mth == m:
+            day15 = day1 + timedelta(days=14)
+            if day15.month != m:
+                dpp -= day15.day
+                if dpp <= 0: return out
+            out += page(day1, dpp)
+            day1 += timedelta(days=15)
+            mth = day1.month
+    else:               # print 'dtp' days beginning with first_day
+        day1 = first_day
+        dpp = 15      # 15 days per page maximum
+        while dtp > 0:
+            if dtp <= 15: dpp = dtp
+            out += page(day1, dpp)
+            dtp -= 15
+            day1 += timedelta(days=15)
+
     return out
 
 #--------------------------
 #   external entry point
 #--------------------------
 
-def sunalmanac(first_day, pagenum):
+def sunalmanac(first_day, dtp):
+    # dtp = 0 if for entire year; = -1 if for entire month; else days to print
 
     # make almanac starting from first_day
     year = first_day.year
@@ -326,8 +371,8 @@ def sunalmanac(first_day, pagenum):
         paper = "a4paper"
         tm = "21mm"
         bm = "18mm"
-        lm = "13mm"
-        rm = "13mm"
+        lm = "12mm"     # 13mm
+        rm = "12mm"     # 13mm
         if config.tbls == "m" and config.decf != '+':	# USNO format for Declination
             tm = "8mm"
             bm = "13mm"
@@ -336,15 +381,15 @@ def sunalmanac(first_day, pagenum):
         if config.tbls == "m" and config.decf == '+':	# Positive/Negative Declinations
             tm = "8mm"
             bm = "13mm"
-            lm = "14mm"
-            rm = "14mm"
+            lm = "12mm"
+            rm = "12mm"
     else:
         # pay attention to the limited page height
         paper = "letterpaper"
         tm = "12.2mm"
         bm = "13mm"
-        lm = "16mm"
-        rm = "16mm"
+        lm = "15mm"     # 16mm
+        rm = "15mm"     # 16mm
         if config.tbls == "m" and config.decf != '+':	# USNO format for Declination
             tm = "5mm"
             bm = "8mm"
@@ -353,8 +398,8 @@ def sunalmanac(first_day, pagenum):
         if config.tbls == "m" and config.decf == '+':	# Positive/Negative Declinations
             tm = "5mm"
             bm = "8mm"
-            lm = "17mm"
-            rm = "17mm"
+            lm = "15mm"
+            rm = "15mm"
 
     # default is 'oneside'...
     alm = r'''\documentclass[10pt, {}]{{report}}'''.format(paper)
@@ -362,7 +407,8 @@ def sunalmanac(first_day, pagenum):
     alm = alm + r'''
 %\usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
-\usepackage{fontenc}'''
+\usepackage{fontenc}
+\usepackage{enumitem} % used to customize the {description} environment'''
 
     if config.tbls == "m":
         alm = alm + r'''
@@ -401,16 +447,26 @@ def sunalmanac(first_day, pagenum):
     \includegraphics[width=0.4\textwidth]{{{}}}\\[1cm]
     \textsc{{\huge The Nautical Almanac for the Sun}}\\[0.7cm]'''.format(fn)
 
-    if pagenum == 25:
+    if dtp == 0:
         alm = alm + r'''
     \HRule \\[0.6cm]
     {{ \Huge \bfseries {}}}\\[0.4cm]
     \HRule \\[1.5cm]'''.format(year)
+    elif dtp == -1:
+        alm = alm + r'''
+    \HRule \\[0.6cm]
+    {{ \Huge \bfseries {}}}\\[0.4cm]
+    \HRule \\[1.5cm]'''.format(first_day.strftime("%B %Y"))
+    elif dtp > 1:
+        alm = alm + r'''
+    \HRule \\[0.6cm]
+    {{ \Huge \bfseries {}}}\\[0.4cm]
+    \HRule \\[1.5cm]'''.format(fmtdates(first_day,first_day+timedelta(days=dtp-1)))
     else:
         alm = alm + r'''
     \HRule \\[0.6cm]
-    {{ \Huge \bfseries from {}.{}.{}}}\\[0.4cm]
-    \HRule \\[1.5cm]'''.format(day,mth,year)
+    {{ \Huge \bfseries {}}}\\[0.4cm]
+    \HRule \\[1.5cm]'''.format(fmtdate(first_day))
 
     alm = alm + r'''
     \begin{center} \large
@@ -425,10 +481,10 @@ def sunalmanac(first_day, pagenum):
     {\large \today}
     \HRule \\[0.6cm]
     \end{center}
-    \begin{description}\footnotesize
+    \begin{description}[leftmargin=5.5em,style=nextline]\footnotesize
     \item[Disclaimer:] These are computer generated tables - use them at your own risk.
     The accuracy has been randomly checked with JPL HORIZONS System, but cannot be guaranteed.
-    This means I cannot be held liable if you get lost on the oceans because of errors in this publication.
+    The author claims no liability for any consequences arising from use of these tables.
     Besides, this publication only contains sun tables: an official version of the Nautical Almanac is indispensable.
     \end{description}
 \end{titlepage}
@@ -466,7 +522,7 @@ def sunalmanac(first_day, pagenum):
     \end{itemize}
 \restoregeometry    % so it does not affect the rest of the pages'''
 
-    alm = alm + pages(first_day,pagenum)
+    alm = alm + pages(first_day,dtp)
     alm = alm + '''
 \end{document}'''
     return alm
