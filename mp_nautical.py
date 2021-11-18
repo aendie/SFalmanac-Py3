@@ -737,7 +737,6 @@ def getmoonstate(dt, lat, hemisph, ts, earth, moon):
 
     time00 = 0.0                        # 00000
     Hseeks = 0
-    i = 1 + config.lat.index(lat)   # index 0 is reserved to enable an explicit setting
     lats = '{:3.1f} {}'.format(abs(lat), hemisph)
     locn = Topos(lats, '0.0 E')
     t0 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
@@ -775,13 +774,14 @@ def getHorizon(t, earth, moon):
 def moonstate(mstate):
     # return the current moonstate (if known)
     out = '--:--'
-    if mstate == True:
+    if mstate == True:      # above horizon
         out = r'''\begin{tikzpicture}\draw (0,0) rectangle (12pt,4pt);\end{tikzpicture}'''
-    if mstate == False:
+    if mstate == False:     # below horizon
         out = r'''\rule{12Pt}{4Pt}'''
     return out
 
-def seek_moonset(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, earth, moon):
+#def seek_moonset(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, earth, moon):
+def seek_moonset(t9, t9noon, t0, t1, t1noon, t2, lats, ts, earth, moon):
     # for the specified date & latitude ...
     # return -1 if there is NO MOONSET yesterday
     # return +1 if there is NO MOONSET tomorrow
@@ -790,10 +790,8 @@ def seek_moonset(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, eart
 
     time00 = 0.0                        # 00000
     Hseeks = 1
-#    config.moonHorizonSeeks += 1
     m_set_t = 0     # normal case: assume moonsets yesterday & tomorrow
 
-#    rise, sett, ris2, set2, fs = fetchMoonData(nxday, t1, t1noon, t2, i, lats, True, round2seconds)
     locn = Topos(lats, "0.0 E")
     horizon = getHorizon(t1noon, earth, moon)
     start00 = time()                    # 00000
@@ -805,8 +803,6 @@ def seek_moonset(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, eart
         m_set_t = +1    # if no moonset detected - it is after tomorrow
     else:
         Hseeks += 1
-#        config.moonHorizonSeeks += 1
-#        rise, sett, ris2, set2, fs = fetchMoonData(prday, t9, t9noon, t0, i, lats, True, round2seconds)
         locn = Topos(lats, "0.0 E")
         horizon = getHorizon(t9noon, earth, moon)
         start00 = time()                # 00000
@@ -819,7 +815,8 @@ def seek_moonset(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, eart
 
     return m_set_t, time00, Hseeks
 
-def seek_moonrise(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, earth, moon):
+#def seek_moonrise(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, earth, moon):
+def seek_moonrise(t9, t9noon, t0, t1, t1noon, t2, lats, ts, earth, moon):
     # for the specified date & latitude ...
     # return -1 if there is NO MOONRISE yesterday
     # return +1 if there is NO MOONRISE tomorrow
@@ -828,10 +825,8 @@ def seek_moonrise(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, ear
 
     time00 = 0.0                        # 00000
     Hseeks = 1
-#    config.moonHorizonSeeks += 1
     m_rise_t = 0    # normal case: assume moonrise yesterday & tomorrow
 
-#    rise, sett, ris2, set2, fs = fetchMoonData(nxday, t1, t1noon, t2, i, lats, True)
     locn = Topos(lats, "0.0 E")
     horizon = getHorizon(t1noon, earth, moon)
     start00 = time()                    # 00000
@@ -843,8 +838,6 @@ def seek_moonrise(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, ear
         m_rise_t = +1    # if no moonrise detected - it is after tomorrow
     else:
         Hseeks += 1
-#        config.moonHorizonSeeks += 1
-#        rise, sett, ris2, set2, fs = fetchMoonData(prday, t9, t9noon, t0, i, lats, True)
         locn = Topos(lats, "0.0 E")
         horizon = getHorizon(t9noon, earth, moon)
         start00 = time()                # 00000
@@ -857,10 +850,11 @@ def seek_moonrise(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, ear
 
     return m_rise_t, time00, Hseeks
 
-def moonset_no_rise(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, earth, moon):
+#def moonset_no_rise(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, earth, moon):
+def moonset_no_rise(date, lat, t9, t9noon, t0, t1, t1noon, t2, lats, ts, earth, moon):
     # if moonset but no moonrise...
     msg = ""
-    n, t00, Hseeks = seek_moonrise(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, earth, moon)
+    n, t00, Hseeks = seek_moonrise(t9, t9noon, t0, t1, t1noon, t2, lats, ts, earth, moon)
     if n == 1:
         out = moonstate(False)      # moonrise "below horizon"
         ##msg = "below horizon (start)"
@@ -872,10 +866,11 @@ def moonset_no_rise(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, 
         out = r'''\raisebox{0.24ex}{\boldmath$\cdot\cdot$~\boldmath$\cdot\cdot$}'''
     return out, t00, Hseeks
 
-def moonrise_no_set(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, earth, moon):
+#def moonrise_no_set(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, earth, moon):
+def moonrise_no_set(date, lat, t9, t9noon, t0, t1, t1noon, t2, lats, ts, earth, moon):
     # if moonrise but no moonset...
     msg = ""
-    n, t00, Hseeks = seek_moonset(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, ts, earth, moon)
+    n, t00, Hseeks = seek_moonset(t9, t9noon, t0, t1, t1noon, t2, lats, ts, earth, moon)
     if n == 1:
         out = moonstate(True)       # moonset "above horizon"
         ##msg = "above horizon (start)"
@@ -890,7 +885,7 @@ def moonrise_no_set(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, 
 # > > > > > > > > > > MULTIPROCESSING ENTRY POINT < < < < < < < < < <
 # > > > > > > > DO NOT WRITE TO config.py  (It's a copy!) < < < < < <
 
-def mp_moonrise_set(d, lat, mstate0, hemisph, ts):  # used by tables.py in twilighttab (section 2)
+def mp_moonrise_set(d, lat, mstate0, hemisph, ts):  # used by nautical.py in twilighttab (section 2)
     # - - - TIMES ARE ROUNDED TO MINUTES - - -
     # returns moonrise and moonset for the given dates and latitude:
     # rise day 1, rise day 2, rise day 3, set day 1, set day 2, set day 3
@@ -907,7 +902,6 @@ def mp_moonrise_set(d, lat, mstate0, hemisph, ts):  # used by tables.py in twili
     out = [None, None, None, None]
     ev1 = ['--:--','--:--','--:--','--:--','--:--','--:--']	# first event
     ev2 = ['--:--','--:--','--:--','--:--','--:--','--:--']	# second event on same day (rare)
-    i = 1 + config.lat.index(lat)   # index 0 is reserved to enable an explicit setting
 
     lats = "{:3.1f} {}".format(abs(lat), hemisph)
     locn = Topos(lats, "0.0 E")
@@ -930,6 +924,7 @@ def mp_moonrise_set(d, lat, mstate0, hemisph, ts):  # used by tables.py in twili
 
     t4 = ts.ut1(dt.year, dt.month, dt.day+4, dt.hour, dt.minute, dt.second)
 
+    # get the angle of the moon below the horizon at noontime (for daily average distance)
     t9noon = ts.ut1(dt.year, dt.month, dt.day, dt.hour-12, dt.minute, dt.second)
     t0noon = ts.ut1(dt.year, dt.month, dt.day, dt.hour+12, dt.minute, dt.second)
     t1noon = ts.ut1(dt.year, dt.month, dt.day+1, dt.hour+12, dt.minute, dt.second)
@@ -952,7 +947,7 @@ def mp_moonrise_set(d, lat, mstate0, hemisph, ts):  # used by tables.py in twili
     if ev1[0] == '--:--' and ev1[3] == '--:--':	# if neither moonrise nor moonset...
         Mseeks -= 1
         if mstate1 == None:
-            if moonstate != None:
+            if mstate0 != None:
                 mstate1 = mstate0        # get the last known moon state
             else:   # must search for the moon state...
                 mstate1, t00, iH = getmoonstate(dt, lat, hemisph, ts, earth, moon)	# ...get moon state if unknown
@@ -961,11 +956,11 @@ def mp_moonrise_set(d, lat, mstate0, hemisph, ts):  # used by tables.py in twili
         ev1[3] = moonstate(mstate1)
 
     elif ev1[0] == '--:--' and ev1[3] != '--:--':	# if moonset but no moonrise...
-        ev1[0], t00, iH = moonset_no_rise(d, lat, d9, t9, t9noon, t0, d1, t1, t1noon, t2, i, lats, ts, earth, moon)
+        ev1[0], t00, iH = moonset_no_rise(d, lat, t9, t9noon, t0, t1, t1noon, t2, lats, ts, earth, moon)
         timeAB += t00                   # 00000
 
     elif ev1[0] != '--:--' and ev1[3] == '--:--':	# if moonrise but no moonset...
-        ev1[3], t00, iH = moonrise_no_set(d, lat, d9, t9, t9noon, t0, d1, t1, t1noon, t2, i, lats, ts, earth, moon)
+        ev1[3], t00, iH = moonrise_no_set(d, lat, t9, t9noon, t0, t1, t1noon, t2, lats, ts, earth, moon)
         timeAB += t00                   # 00000
     Hseeks += iH
 #-----------------------------------------------------------
@@ -992,11 +987,11 @@ def mp_moonrise_set(d, lat, mstate0, hemisph, ts):  # used by tables.py in twili
         ev1[4] = moonstate(mstate2)
 
     elif ev1[1] == '--:--' and ev1[4] != '--:--':	# if moonset but no moonrise...
-        ev1[1], t00, iH = moonset_no_rise(d1, lat, d, t0, t0noon, t1, d2, t2, t2noon, t3, i, lats, ts, earth, moon)
+        ev1[1], t00, iH = moonset_no_rise(d1, lat, t0, t0noon, t1, t2, t2noon, t3, lats, ts, earth, moon)
         timeAB += t00                   # 00000
 
     elif ev1[1] != '--:--' and ev1[4] == '--:--':	# if moonrise but no moonset...
-        ev1[4], t00, iH = moonrise_no_set(d1, lat, d, t0, t0noon, t1, d2, t2, t2noon, t3, i, lats, ts, earth, moon)
+        ev1[4], t00, iH = moonrise_no_set(d1, lat, t0, t0noon, t1, t2, t2noon, t3, lats, ts, earth, moon)
         timeAB += t00                   # 00000
     Hseeks += iH
 #-----------------------------------------------------------
@@ -1023,11 +1018,11 @@ def mp_moonrise_set(d, lat, mstate0, hemisph, ts):  # used by tables.py in twili
         ev1[5] = moonstate(mstate3)
 
     elif ev1[2] == '--:--' and ev1[5] != '--:--':	# if moonset but no moonrise...
-        ev1[2], t00, iH = moonset_no_rise(d2, lat, d1, t1, t1noon, t2, d3, t3, t3noon, t4, i, lats, ts, earth, moon)
+        ev1[2], t00, iH = moonset_no_rise(d2, lat, t1, t1noon, t2, t3, t3noon, t4, lats, ts, earth, moon)
         timeAB += t00                   # 00000
 
     elif ev1[2] != '--:--' and ev1[5] == '--:--':	# if moonrise but no moonset...
-        ev1[5], t00, iH = moonrise_no_set(d2, lat, d1, t1, t1noon, t2, d3, t3, t3noon, t4, i, lats, ts, earth, moon)
+        ev1[5], t00, iH = moonrise_no_set(d2, lat, t1, t1noon, t2, t3, t3noon, t4, lats, ts, earth, moon)
         timeAB += t00                   # 00000
     Hseeks += iH
 #-----------------------------------------------------------

@@ -1047,6 +1047,7 @@ def fetchMoonData(d, tFrom, tNoon, tTo, i, lats, hFlag = False, round2seconds=Fa
             config.moonHorizonFound += 1    # "data found in transient store" count
         else:
             config.moonDataFound += 1       # "data found in transient store" count
+        #print("stored data:", rise, sett, ris2, set2, fs)
 
     return rise, sett, ris2, set2, fs
 
@@ -1081,6 +1082,7 @@ def moonrise_set(d, lat, hemisph):  # used by tables.py in twilighttab (section 
 
     t4 = ts.ut1(dt.year, dt.month, dt.day+4, dt.hour, dt.minute, dt.second)
 
+    # get the angle of the moon below the horizon at noontime (for daily average distance)
     t9noon = ts.ut1(dt.year, dt.month, dt.day, dt.hour-12, dt.minute, dt.second)
     t0noon = ts.ut1(dt.year, dt.month, dt.day, dt.hour+12, dt.minute, dt.second)
     t1noon = ts.ut1(dt.year, dt.month, dt.day+1, dt.hour+12, dt.minute, dt.second)
@@ -1203,6 +1205,7 @@ def moonstate(ndx):
 def getmoonstate(dt, lat, hemisph):
     # populate the moon state (visible or not) for the specified date & latitude
     # note: the first parameter 'dt' is already a datetime 30 seconds before midnight
+    #       (for Nautical Almanac) or 0.5 sec before midnight (for Event Time tables)
     # note: getmoonstate is called when there is neither a moonrise nor a moonset on 'dt'
 
     i = 1 + config.lat.index(lat)   # index 0 is reserved to enable an explicit setting
@@ -1839,14 +1842,10 @@ def find_new_moon(d):       # used in doublepage
     WaxingMoon = None
     # note: the python datetimes above are timezone 'aware' (not 'naive')
 
-##    search from 30 days earlier than noon... till noon on this day
-##    t0 = ts.utc(d0.year, d0.month, d0.day, 12, 0, 0)
-##    t1 = ts.utc(d.year, d.month, d.day, 12, 0, 0)
-
-    # search from 30 days earlier than midnight... till midnight on this day
+    # search from 30 days earlier than noon... till noon on this day
     d0 = d - datetime.timedelta(days=30)
-    t0 = ts.utc(d0.year, d0.month, d0.day, 0, 0, 0)
-    t1 = ts.utc(d.year, d.month, d.day, 0, 0, 0)
+    t0 = ts.utc(d0.year, d0.month, d0.day, 12, 0, 0)
+    t1 = ts.utc(d.year, d.month, d.day, 12, 0, 0)
     start00 = time.time()                   # 00000
     t, y = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
     config.stopwatch += time.time()-start00 # 00000

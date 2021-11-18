@@ -386,9 +386,9 @@ def getHorizon(t, earth, moon):
 def moonstate(mstate):
     # return the current moonstate (if known)
     out = '--:--'
-    if mstate == True:
+    if mstate == True:      # above horizon
         out = r'''\begin{tikzpicture}\draw (0,0) rectangle (12pt,4pt);\end{tikzpicture}'''
-    if mstate == False:
+    if mstate == False:     # below horizon
         out = r'''\rule{12Pt}{4Pt}'''
     return out
 

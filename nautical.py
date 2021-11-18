@@ -260,9 +260,9 @@ def double_events_found(m1, m2):
     return dbl
 
 # >>>>>>>>>>>>>>>>>>>>>>>>
-def mp_planetGHA_worker(date, obj, ts):
+def mp_planetGHA_worker(date, ts, obj):
     #print(" mp_planetGHA_worker Start  {}".format(obj))
-    gha = mp_planetGHA(date, obj, ts)    # ===>>> mp_nautical.py
+    gha = mp_planetGHA(date, ts, obj)    # ===>>> mp_nautical.py
     #print(" mp_planetGHA_worker Finish {}".format(obj))
     return gha      # return list for four planets and Aries
 
@@ -847,7 +847,6 @@ def sunmoontabm(date, ts):
 # >>>>>>>>>>>>>>>>>>>>>>>>
 # create a list of 'moon above/below horizon' states per Latitude...
 #    None = unknown; True = above horizon (visible); False = below horizon (not visible)
-#    moonvisible[0] is not linked to a latitude but a manual override
 # The moon above/below status is stored at 3-day intervals, i.e. when multiprocessing "1st day",
 #    the previous day's status is stored here (except on the first day to be processed).
 #    Multiprocessing does not confuse the states as every three days it waits for all data.
@@ -884,9 +883,10 @@ def twilighttab(date, ts):
         data = [(config.lat[ii], moonvisible[ii]) for ii in range(len(config.lat))]
         partial_func2 = partial(mp_moonlight_worker, date, ts)  # list of tuples
         listmoon = pool.starmap(partial_func2, data, 1)   # RECOMMENDED: chunksize = 1
+        #print("listmoon = {}".format(listmoon))
         for k in range(len(listmoon)):
             tuple_seeks = listmoon[k][-1]
-            config.moonDataSeeks    += tuple_seeks[0]   # count of moonrise ot set seeks
+            config.moonDataSeeks    += tuple_seeks[0]   # count of moonrise or set seeks
             config.moonHorizonSeeks += tuple_seeks[1]   # count of horizon seeks
             moonvisible[k] = tuple_seeks[2]             # updated moon state
             del listmoon[k][-1]
@@ -1159,8 +1159,13 @@ def doublepage(date, page1, ts):
     dut1, deltat = getDUT1(date)
     timeDUT1 = r"DUT1 = UT1-UTC = {:+.4f} sec\quad$\Delta$T = TT-UT1 = {:+.4f} sec".format(dut1, deltat)
 
-    dateZ = date + timedelta(days=2)        # last day
     find_new_moon(date)     # required for 'moonage' and 'equation_of_time"
+    #from alma_skyfield import PreviousNewMoon, PreviousFullMoon, NextNewMoon, NextFullMoon
+    #print("previous  new moon: %s" %PreviousNewMoon)
+    #print("previous full moon: %s" %PreviousFullMoon)
+    #print("next      new moon: %s" %NextNewMoon)
+    #print("next     full moon: %s" %NextFullMoon)
+
     page = ''
     if not(page1):
         page = r'''
@@ -1251,7 +1256,7 @@ def pages(first_day, dtp, ts):
             else:
                 sys.stdout.write('.')	# progress indicator
                 sys.stdout.flush()
-            out += doublepage(day1, page1, ts)
+            out += doublepage(day1,page1,ts)
             page1 = False
             day1 += timedelta(days=3)
             year = day1.year
@@ -1270,14 +1275,14 @@ def pages(first_day, dtp, ts):
             else:
                 sys.stdout.write('.')	# progress indicator
                 sys.stdout.flush()
-            out += doublepage(day1, page1, ts)
+            out += doublepage(day1,page1,ts)
             page1 = False
             day1 += timedelta(days=3)
             mth = day1.month
     else:           # print 'dtp' days beginning with first_day
         i = dtp   # don't decrement dtp
         while i > 0:
-            out += doublepage(day1, page1, ts)
+            out += doublepage(day1,page1,ts)
             page1 = False
             i -= 3
             day1 += timedelta(days=3)

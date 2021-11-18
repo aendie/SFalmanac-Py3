@@ -250,7 +250,7 @@ def suntabm(date, n):
                 h += 1
 
         sds, dsm = alma_skyfield.sunSD(date)
-        tab = tab + r'''\cmidrule{{2-3}} &
+        tab = tab + r'''\cmidrule{{2-3}} & 
 \multicolumn{{1}}{{c}}{{\scriptsize{{SD\,=\,{}$'$}}}} & \multicolumn{{1}}{{c}}{{\footnotesize{{\textit{{d}}\,=\,{}$'$}}}}\\
 \cmidrule{{2-3}}'''.format(sds,dsm)
         # note: '\,' inserts a .166667em space in text mode 
@@ -274,11 +274,9 @@ def page(date, dpp=15):
     timeDUT1 = r"DUT1 = UT1-UTC = {:+.4f} sec\quad$\Delta$T = TT-UT1 = {:+.4f} sec".format(dut1, deltat)
 
     if dpp > 1:
-        str2 = r'''\textbf{{{} to {} UT}}
-'''.format(date.strftime("%Y %B %d"),(date+timedelta(days=dpp-1)).strftime("%b. %d"))
+        str2 = r'''\textbf{{{} to {} UT}}'''.format(date.strftime("%Y %B %d"),(date+timedelta(days=dpp-1)).strftime("%b. %d"))
     else:
-        str2 = r'''\textbf{{{} UT}}
-'''.format(date.strftime("%Y %B %d"))
+        str2 = r'''\textbf{{{} UT}}'''.format(date.strftime("%Y %B %d"))
 
     # creates a page(15 days) of the Sun almanac
     page = r'''

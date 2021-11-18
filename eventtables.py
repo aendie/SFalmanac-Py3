@@ -339,7 +339,7 @@ def equationtab(date, dpp):
 #   page preparation
 #----------------------
 
-def page(date, ts, dpp=2):
+def page(date, ts, dpp):
 
     # time delta values for the initial date&time...
     dut1, deltat = getDUT1(date)
@@ -350,11 +350,9 @@ def page(date, ts, dpp=2):
     #rightindent = ""
 
     if dpp > 1:
-        str2 = r'''\textbf{{{} to {} UT}}
-'''.format(date.strftime("%Y %B %d"),(date+timedelta(days=dpp-1)).strftime("%b. %d"))
+        str2 = r'''\textbf{{{} to {} UT}}'''.format(date.strftime("%Y %B %d"),(date+timedelta(days=dpp-1)).strftime("%b. %d"))
     else:
-        str2 = r'''\textbf{{{} UT}}
-'''.format(date.strftime("%Y %B %d"))
+        str2 = r'''\textbf{{{} UT}}'''.format(date.strftime("%Y %B %d"))
 
     page = r'''
 % ------------------ N E W   P A G E ------------------
@@ -369,11 +367,11 @@ def page(date, ts, dpp=2):
 
     date2 = date+timedelta(days=1)
     page += twilighttab(date,ts)
-    page += meridiantab(date, ts)
+    page += meridiantab(date,ts)
     if dpp == 2:
         page += twilighttab(date2,ts)
-        page += meridiantab(date2, ts)
-    page += equationtab(date, dpp)
+        page += meridiantab(date2,ts)
+    page += equationtab(date,dpp)
 
     # to avoid "Overfull \hbox" messages, leave a paragraph end before the end of a size change. (This may only apply to tabular* table style) See lines below...
     page = page + r'''
@@ -420,7 +418,7 @@ def pages(first_day, dtp, ts):
             else:
                 sys.stdout.write('.')	# progress indicator
                 sys.stdout.flush()
-            out += page(day1, ts, dpp)
+            out += page(day1,ts,dpp)
             day1 += timedelta(days=2)
             year = day1.year
     elif dtp == -1:     # if entire month
@@ -441,14 +439,14 @@ def pages(first_day, dtp, ts):
             else:
                 sys.stdout.write('.')	# progress indicator
                 sys.stdout.flush()
-            out += page(day1, ts, dpp)
+            out += page(day1,ts,dpp)
             day1 += timedelta(days=2)
             mth = day1.month
     else:           # print 'dtp' days beginning with first_day
         i = dtp   # don't decrement dtp
         while i > 0:
             if i < 2: dpp = i
-            out += page(day1, ts, dpp)
+            out += page(day1,ts,dpp)
             i -= 2
             day1 += timedelta(days=2)
 
@@ -553,7 +551,7 @@ def maketables(first_day, dtp, ts):
     % TRIM values: left bottom right top
     \includegraphics[clip, trim=12mm 20cm 12mm 21mm, width=0.92\textwidth]{{{}}}\\[0.3cm]
     \includegraphics[clip, trim=12mm 20cm 12mm 21mm, width=0.92\textwidth]{{{}}}\\'''.format(fn1,fn2)
-    
+
     alm = alm + r'''[{}]
     \textsc{{\huge Event Time Tables}}\\[{}]'''.format(vsep1,vsep2)
 

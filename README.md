@@ -125,6 +125,9 @@ The PDF filenames have been revised (again):
 * NAtrad_\<starting date or month or year\>.pdf: for Nautical Almanacs in traditional style
 * STtrad_\<starting date or month or year\>.pdf: for Sun Tables in traditional style
 
+BUGFIX (solved here and in PyPI sfalmanac 1.6.1):  
+The first day in a Nautical Almanac did not initialize the moon state 'above or below horizon' when there was no Moonrise or Moonset at some latitudes on that day in Multiprocessing mode (only).
+
 ## Requirements
 
 &emsp;Most of the computation is done by the free Skyfield library.  
