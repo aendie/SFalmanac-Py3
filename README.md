@@ -131,6 +131,9 @@ The first day in a Nautical Almanac did not initialize the moon state 'above or 
 BUGFIX (solved here and in PyPI sfalmanac 1.6.2):  
 The Moon Declination on the last hour of the day did not indicate 'N' or 'S' when it had just changed, i.e. since 22h. This rare case occurs, for example, on 14th Jun 2024 and 15th Oct 2024.
 
+BUGFIX (solved here and in PyPI sfalmanac 1.6.3):  
+Two import statements (essential for Linux and MacOS) were missing.
+
 ## Requirements
 
 &emsp;Most of the computation is done by the free Skyfield library.  

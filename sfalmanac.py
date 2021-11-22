@@ -19,7 +19,8 @@
 
 # Standard library imports
 import os
-import sys
+import sys, site
+from sysconfig import get_path  # new in python 3.2
 import time
 import datetime
 from multiprocessing import cpu_count
