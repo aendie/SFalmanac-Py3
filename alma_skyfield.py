@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-#   Copyright (C) 2021  Andrew Bauer
+#   Copyright (C) 2022  Andrew Bauer
 
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -22,8 +22,10 @@
 import datetime
 import time         # 00000 - stopwatch elements
 import math
-from os import path
+import os
+import errno        # NEW April 2022
 import socket
+from urllib.request import urlopen  # NEW April 2022
 
 # Third party imports
 from skyfield import VERSION
@@ -66,7 +68,79 @@ def isConnected():
         return True
     except OSError:
         pass
-    return False
+    # try alternate source if above server is down ...
+    try:
+        # connect to the host -- tells us if the host is actually reachable
+        sock = socket.create_connection(("maia.usno.navy.mil", 80))
+        if sock is not None: sock.close
+        return True
+    except OSError:
+        pass
+    return False    # if neither is reachable
+
+# NOTE: the IERS server is unavailable (due to maintenance work in the first 3 weeks, at least, of April 2022)
+#       however, although the USNO server currently works, it was previously down for 2.5 years!
+#       So it is still best to try using the IERS server as first oprion, and USNO as second.
+
+def testIERSserver(filename):
+    url = "ftp://ftp.iers.org/products/eop/rapid/standard/" + filename
+    try:
+        connection2 = urlopen(url)
+    except Exception as e:
+        e2 = IOError('cannot download {0} because {1}'.format(url, e))
+        e2.__cause__ = None
+#        raise e2
+        return False
+    return True     # server works
+
+def downloadUSNO(path, filename):
+    print("Downloading from USNO...", end ="")
+    filepath = os.path.join(path, filename)
+    url = "https://maia.usno.navy.mil/ser7/" + filename
+    connection = urlopen(url)
+    blocksize = 128*1024
+
+    # Claim our own unique download filename.
+
+    tempbase = tempname = path + '.download'
+    flags = getattr(os, 'O_BINARY', 0) | os.O_CREAT | os.O_EXCL | os.O_RDWR
+    i = 1
+    while True:
+        try:
+            fd = os.open(tempname, flags, 0o666)
+        except OSError as e:  # "FileExistsError" is not supported by Python 2
+            if e.errno != errno.EEXIST:
+                raise
+            i += 1
+            tempname = '{0}{1}'.format(tempbase, i)
+        else:
+            break
+
+    # Download to the temporary filename.
+
+    with os.fdopen(fd, 'wb') as w:
+        try:
+            length = 0
+            while True:
+                data = connection.read(blocksize)
+                if not data:
+                    break
+                w.write(data)
+                length += len(data)
+            w.flush()
+        except Exception as e:
+            raise IOError('error getting {0} - {1}'.format(url, e))
+
+    # Rename the temporary file to the destination name.
+
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    try:
+        os.rename(tempname, filepath)
+    except Exception as e:
+        raise IOError('error renaming {0} to {1} - {2}'.format(tempname, filepath, e))
+
+    print("done.")
 
 def init_sf(spad):
     global ts, eph, earth, moon, sun, venus, mars, jupiter, saturn, df
@@ -76,14 +150,17 @@ def init_sf(spad):
 
     if config.useIERS:
         if compareVersion(VERSION, "1.31") >= 0:
-            if path.isfile(dfIERS):
+            if os.path.isfile(dfIERS):
                 if load.days_old(EOPdf) > float(config.ageIERS):
-                    if isConnected(): load.download(EOPdf)
+                    if isConnected():
+                        if testIERSserver(EOPdf): load.download(EOPdf)
+                        else: downloadUSNO(spad,EOPdf)
                     else: print("NOTE: no Internet connection... using existing '{}'".format(EOPdf))
                 ts = load.timescale(builtin=False)	# timescale object
             else:
                 if isConnected():
-                    load.download(EOPdf)
+                    if testIERSserver(EOPdf): load.download(EOPdf)
+                    else: downloadUSNO(spad,EOPdf)
                     ts = load.timescale(builtin=False)	# timescale object
                 else:
                     print("NOTE: no Internet connection... using built-in UT1-tables")
