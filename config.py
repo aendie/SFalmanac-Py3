@@ -32,6 +32,12 @@ useIERS = True  # 'True' to download finals2000A.all; 'False' to use built-in UT
 ageIERS = 30    # download a new finals2000A.all version after 'ageIERS' days if useIERS=True
 MULTIpr = True  # 'True' enables multiprocessing; otherwise only 1 logical processor is used
 
+# Lunar Distance strategy for selecting celestial objects:
+#   A   objects closest to the Moon
+#   B   objects with highest hourly Lunar Distance delta
+#   C   objects with brightest navigational stars
+defaultLDstrategy = 'B'   # 'A', 'B', 'C', or '' to ask user for desired strategy
+
 # ================ DO NOT EDIT LINES BELOW HERE ================
 
 # Docker-related stuff...
@@ -65,6 +71,11 @@ moonDataSeeks = 0   # count of moon daily data seeks
 moonDataFound = 0   # moon daily data seeks found in transient data store
 moonHorizonSeeks = 0   # count of moon continuously above/below horizon seeks
 moonHorizonFound = 0   # moon continuously above/below horizon seeks found in transient data store
+
+# define global variables for Lunar Distance calculations...
+debug_strategy = False
+debug_star_data = False
+debug_planet_data = False
 
 # list of latitudes to include for Sunrise/Sunset/Twilight/Moonrise/Moonset...
 lat = [72,70,68,66,64,62,60,58,56,54,52,50,45,40,35,30,20,10,0,-10,-20,-30,-35,-40,-45,-50,-52,-54,-56,-58,-60]

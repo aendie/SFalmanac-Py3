@@ -22,11 +22,11 @@
 #       will be removed from Python at some later time. See:
 # https://docs.python.org/3/whatsnew/3.0.html#pep-3101-a-new-approach-to-string-formatting
 
-# Standard library imports
+##### Standard library imports ######
 from datetime import datetime, timedelta
 from math import copysign as copysign
 
-# Local application imports
+##### Local application imports ######
 import config
 import alma_skyfield as alma_skyfield
 

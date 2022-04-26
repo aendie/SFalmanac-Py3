@@ -136,9 +136,13 @@ Two import statements (essential for Linux and MacOS) were missing.
 
 **UPDATE: Apr 2022**
 
+Lunar Distance tables have been added as a new option.
+
 Skyfield relies on the IERS, the International Earth Rotation Service, for accurate measurements of UT1 and for the schedule of leap seconds that keeps UTC from straying more than 0.9 seconds away from UT1.
 
 However the IERS server is currently undergoing maintenance and thus unavailable, which causes SFalmanac to fail. This version first tests is the IERS server is available and otherwise downloads the EOP (Earth Orientation Parameters) data from USNO (US Naval Observatory) instead.
+
+BUGFIX: Event Time tables no longer fail on 24.08.2063 (Lower Transit).
 
 ## Requirements
 

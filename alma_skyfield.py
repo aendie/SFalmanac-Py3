@@ -18,7 +18,7 @@
 
 # This contains the majority of functions that calculate values for the Nautical Almanac
 
-# Standard library imports
+###### Standard library imports ######
 import datetime
 import time         # 00000 - stopwatch elements
 import math
@@ -27,7 +27,7 @@ import errno        # NEW April 2022
 import socket
 from urllib.request import urlopen  # NEW April 2022
 
-# Third party imports
+###### Third party imports ######
 from skyfield import VERSION
 from skyfield.api import Loader
 from skyfield.api import Topos, Star
@@ -37,7 +37,7 @@ from skyfield.data import hipparcos
 from skyfield.magnitudelib import planetary_magnitude
 import numpy as np
 
-# Local application imports
+###### Local application imports ######
 import config
 
 #----------------------
@@ -46,6 +46,7 @@ import config
 
 hour_of_day = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
 next_hour_of_day = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+hour_of_day26 = [-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
 degree_sign= u'\N{DEGREE SIGN}'
 
 def compareVersion(versions1, version2):
@@ -804,6 +805,10 @@ def stellar_info(d):        # used in starstab
         out.append([name,sha,decl])
     return out
 
+#-----------------------
+#   stellar data
+#-----------------------
+
 # List of navigational stars with Hipparcos Catalog Number
 db = """
 Alpheratz,677
@@ -865,6 +870,32 @@ Al Na'ir,109268
 Fomalhaut,113368
 Scheat,113881
 Markab,113963
+"""
+
+# List of navigational stars with magnitude <= 1.5 (with Hipparcos Catalog Number) plus Polaris
+navstars = """
+Achernar,5,7588,0.4233
+Polaris,0,11767,2.1077
+Aldebaran,10,21421,1.0024
+Rigel,11,24436,0.1930
+Capella,12,24608,0.2385
+Betelgeuse,16,27989,0.4997
+Canopus,17,30438,-0.5536
+Sirius,18,32349,-1.0876
+Adhara,19,33579,1.4160
+Procyon,20,37279,0.4607
+Pollux,21,37826,1.2947
+Regulus,26,49669,1.3232
+Acrux,30,60718,0.6739
+Spica,33,65474,0.8891
+Hadar,35,68702,0.5366
+Arcturus,37,69673,0.1114
+Rigil Kent.,38,71683,0.1373
+Antares,42,80763,0.9757
+Vega,49,91262,0.0868
+Altair,51,97649,0.8273
+Deneb,53,102098,1.2966
+Fomalhaut,56,113368,1.1808
 """
 
 #--------------------
@@ -955,51 +986,6 @@ def daylength(topos, degBelowHorizon):
     is_sun_up_at.rough_period = 0.5  # twice a day
     return is_sun_up_at
 
-##UNUSED##
-# create a list of 'sun above/below horizon' states per Latitude per Normal/Civil/Naut...
-#global sunvisible
-#sunvisible = [[None]*3 for i in range(31)]	# sunvisible[0][0] up to sunvisible[30][2]
-
-##UNUSED - only called by getsunstate (obsolete) ##
-def sunstate(ndx, h):
-    # return the current sunstate (if known)
-    out = '--:--'
-    if sunvisible[ndx][h] == True:
-        out = r'''\begin{tikzpicture}\draw (0,0) rectangle (12pt,4pt);\end{tikzpicture}'''
-    if sunvisible[ndx][h] == False:
-        out = r'''\rule{12Pt}{4Pt}'''
-    return out
-
-##UNUSED - poor algorithm - replaced by midnightsun ##
-def getsunstate(dt, lat, hemisph, horizon, j):
-    # populate the sun state (visible or not) for the specified date & latitude
-    # note: the first parameter 'dt' is already a datetime 30 seconds before midnight
-    # note: getsunstate is called when there is neither a sunrise nor a sunset on 'dt'
-
-    i = config.lat.index(lat)
-    lats = '{:3.1f} {}'.format(abs(lat), hemisph)
-    locn = Topos(lats, '0.0 E')
-    t0 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
-    # clear the value as the sun state is not tracked daily...
-    sunvisible[i][j] = None
-
-    # search for the next sunrise or sunset (returned in sunstate[0] and y[0])
-    while sunvisible[i][j] == None:
-        t0 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
-        dt += datetime.timedelta(days=1)
-        t9 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
-        start00 = time.time()                   # 00000
-        sunstate, y = almanac.find_discrete(t0, t9, daylength(locn, horizon))
-        config.stopwatch2 += time.time()-start00 # 00000
-        if len(sunstate) > 0:
-
-            if y[0]:
-                sunvisible[i][j] = False
-            else:
-                sunvisible[i][j] = True
-
-    return
-
 #-------------------------
 #   MOONRISE/-SET table
 #-------------------------
@@ -1028,7 +1014,6 @@ MDndx = MDlen - 1           # index to latest added date (initially 0 will be ch
 #       item[1][2:3] ... the middle character is 'finalstate' ... 'n' = above horizon; 'v' = below horizon
 np_array = np.ndarray(shape=(MDlen,31,2), dtype=np.dtype('U5'))
 
-##NEW##
 def getHorizon(t):
     # calculate the angle of the moon below the horizon at moonrise/set
 
@@ -1041,7 +1026,6 @@ def getHorizon(t):
 
     return horizon
 
-##NEW##
 def fetchMoonData(d, tFrom, tNoon, tTo, i, lats, hFlag = False, round2seconds=False):
     # calculate & store moon data (rise/set times) or fetch data if pre-calculated.
     # --- THIS IMPROVES PERFORMANCE BY AVOIDING DUPLICATE COSTLY CALCULATIONS AS ---
@@ -1124,7 +1108,6 @@ def fetchMoonData(d, tFrom, tNoon, tTo, i, lats, hFlag = False, round2seconds=Fa
             config.moonHorizonFound += 1    # "data found in transient store" count
         else:
             config.moonDataFound += 1       # "data found in transient store" count
-        #print("stored data:", rise, sett, ris2, set2, fs)
 
     return rise, sett, ris2, set2, fs
 
@@ -1310,7 +1293,6 @@ def getmoonstate(dt, lat, hemisph):
 
     return
 
-##NEW##
 def moonset_no_rise(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, round2seconds=False):
     # if moonset but no moonrise...
     msg = ""
@@ -1329,7 +1311,6 @@ def moonset_no_rise(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, 
         out = r'''\raisebox{0.24ex}{\boldmath$\cdot\cdot$~\boldmath$\cdot\cdot$}'''
     return out
 
-##NEW##
 def moonrise_no_set(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, round2seconds=False):
     # if moonrise but no moonset...
     msg = ""
@@ -1346,7 +1327,6 @@ def moonrise_no_set(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, 
         out = r'''\raisebox{0.24ex}{\boldmath$\cdot\cdot$~\boldmath$\cdot\cdot$}'''
     return out
 
-##NEW##
 def seek_moonset(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, round2seconds=False):
     # for the specified date & latitude ...
     # return -1 if there is NO MOONSET yesterday
@@ -1370,7 +1350,6 @@ def seek_moonset(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, round2se
 
     return m_set_t
 
-##NEW##
 def seek_moonrise(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, round2seconds=False):
     # return -1 if there is NO MOONRISE yesterday
     # return +1 if there is NO MOONRISE tomorrow
@@ -1672,7 +1651,10 @@ def find_transit2(d, ghaList, modeLT):
 
     # again locate it more precisely (to the second)
     iLoops = 0
-    sec_start = max(0, int((360-prev_gha)/0.25*60.0)-1)
+    # NOTE: 0.25 in the sec_start equation below works for every day except 24.08.2063 (Lower Transit)
+    #       0.26 is a better choice
+    #val = (360-prev_gha)/0.25*60.0
+    sec_start = max(0, int((360-prev_gha)/0.26*60.0)-1)
     for se in range(sec_start,60):      # 0 to 59 max
         gha = getGHA(d, hr, mi, se+1)   # GHA on the second after the event
         gha_time = "{:02d}:{:02d}:{:02d}".format(hr,mi,se+1)
@@ -1680,6 +1662,7 @@ def find_transit2(d, ghaList, modeLT):
             gha = GHAcolong(gha)
         if(gha < prev_gha):
             if(iLoops == 0 and se > 0): raise ValueError('ERROR: sec_start ({}) too large on {} at {} ({})'.format(se, d, gha_time, txt))
+            #if(iLoops == 0 and se > 0): raise ValueError('ERROR: sec_start ({}) too large on {} at {} ({}) val = {:f}'.format(se, d, gha_time, txt, val))
             break       # break when event detected ('hr:mi:se' is before event)
         prev_gha = gha  # GHA each second before the event
         prev_time = "{:02d}:{:02d}:{:02d}".format(hr,mi,se+1)
@@ -1949,3 +1932,441 @@ def find_new_moon(d):       # used in doublepage
         if PreviousFullMoon > PreviousNewMoon:
             WaxingMoon = False
     return
+
+#---------------------------------
+#   Lunar Distance calculations
+#---------------------------------
+
+def ld_planets(d):          # used in moontab
+    # 'out' returns a list with: name, SHA, Dec, max LD angle, max RA, list of LD per hour of day
+    #       for sun and 4 navigational planets on epoch of date.
+    # 'tup' returns a list of tuples with: NEGATIVE index (0 to -5) to list within 'out', max LD angle with sign
+    #       indicating if East (-ve) or West (+ve) of the moon 
+    #       (120° max; invalid planets have 1000° - these have no data)
+    # 'ra_m" returns the moon's RA per hour of day
+
+    out = []
+    ra_sun = [None] * 26
+    NewMoonHours = []   # List includes the 'hour of day' when sun-moon LD is < 10°
+                        #   (the moon is hardly visible during New Moon)
+                        # ... thus no Lunar Distance measurements can be made.
+    l_idx = [i for i in range(0, -5, -1)]   # 5 index values (including zero)
+    firstLD_per_planet    = [None] * 5      # sun + 4 navigational planet LD angles
+    lastLD_per_planet     = [None] * 5      # sun + 4 navigational planet LD angles
+    maxLD_per_planet      = [None] * 5      # sun + 4 navigational planet LD angles
+    minLD_per_planet      = [None] * 5      # sun + 4 navigational planet LD angles
+    maxLDdelta_per_planet = [None] * 5      # sun + 4 navigational planet LD angles
+    LDhours_per_planet    = [None] * 5      # sun + 4 navigational planet LD angles
+    mag_per_planet        = [None] * 5      # sun + 4 navigational planet LD angles
+
+    # 25 hours/day need to be calculated: 23h on 'day-1' is needed for hourly LD delta at 0h on 'day'
+    t = ts.ut1(d.year, d.month, d.day, hour_of_day26, 0, 0)
+    e = earth.at(t)
+    pos_m = e.observe(moon).apparent()
+    ra_m = pos_m.radec(epoch='date')[0]
+
+    for idx in range(5):
+        ld_pm = ['' for x in range(24)]
+        ra_pm = ['' for x in range(24)]
+        if   idx == 0:
+            name = "Sun"
+            Vmag = -26.74
+            pos_p = e.observe(sun).apparent()
+            pos_H = pos_p   # Helios
+        elif idx == 1:
+            name = "Venus"
+            Vmag = -4.14    # mean brightness (-2.98 to -4.6)
+            pos_p = e.observe(venus).apparent()
+        elif idx == 2:
+            name = "Mars"
+            Vmag = 0.71     # mean brightness
+            pos_p = e.observe(mars).apparent()
+        elif idx == 3:
+            name = "Jupiter"
+            Vmag = -2.20     # mean brightness
+            pos_p = e.observe(jupiter).apparent()
+        elif idx == 4:
+            name = "Saturn"
+            Vmag = 0.46     # mean brightness
+            pos_p = e.observe(saturn).apparent()
+
+        sep_pm = pos_m.separation_from(pos_p)
+        ra_p, dec, distance = pos_p.radec(epoch='date')
+        #ra_p = pos_p.radec(epoch='date')[0]
+        if idx > 0:     # if a planet
+            sep_pH = pos_H.separation_from(pos_p)
+
+        #sha  = fmtgha(0, ra_p.hours)
+        #decl = fmtdeg(dec.degrees)
+
+        n = 0                   # count valid moon-planet LD angles (e.g. under 120°)
+        sd = 100.0              # any fake value above 10°
+        ld_first = 0.0          # first valid LD
+        ld_last = 0.0           # last valid LD
+        ld_max = 0.0            # maximum LD
+        ld_min = 400.0          # minimum LD (invalid value initially)
+        ld_max_ra = 0.0         # direction from moon (right or left)
+        ld_min_ra = 0.0         # direction from moon (right or left)
+        ld_delta_max = 0.0      # max hourly change in LD
+
+        # negative hours are chosen so as to calculate rate of change of hourly LD delta for hour "0":
+        #   = ld_delta[hour0-hour-1]    versus    prev_ld_delta[hour-1-hour-2]
+
+        for i in range(-2, 24):
+            ld = sep_pm.degrees[i+2]    # Lunar Distance
+            if idx > 0: sd = sep_pH.degrees[i+2]    # Solar Distance (if a planet)
+            if idx == 0:
+                ra_sun[i+2] = ra_p.hours[i+2]
+            if i == -2:     # if i = -2
+                prev_ld = ld    # initialize 'previous lunar distance'...
+                prev_ld_delta = 10.0    # fake initial value
+                continue        # ... only!!
+            if i < 0:       # if i = -1
+                ld_delta = abs(ld - prev_ld)    # in degrees
+                prev_ld = ld
+                prev_ld_delta = ld_delta
+                continue        # ... only!!
+
+            # if i >= 0
+            if idx == 0 and ld < 10.0: NewMoonHours.append(i)    # 'New Moon' (hours when sun-moon LD < 10°)
+            if idx == 0 and ld < 40.0:
+                ld_pm[i] = r"ld \textless 40.0"
+                continue  # moon is not visible if sun-moon LD < 40°
+
+            skip = False
+            ld_delta = abs(ld - prev_ld)    # in degrees
+            if ld_delta < 0.25: 
+                skip = True     # ensure LD delta > 15' of arc
+                ld_pm[i] = r"ld/h \textless 15'"
+            else:
+                # skip if rate of change of ld_delta too high (non-linear)
+                chg = ld_delta - prev_ld_delta
+                if abs(chg) < 8:    # first value is fake (hour2-hour1) vs (hour1-hour0)
+                    if abs(chg) > 0.016:    # cutoff chosen empirically
+                        #print("{}: {}h ld_delta change = {}".format(name,i,chg))
+                        ld_pm[i] = r"ld/h rate \textgreater 0.016"
+                        skip = True
+            prev_ld_delta = ld_delta
+            prev_ld = ld
+            if skip: continue       # ignore as ld hourly rate < 15' of arc
+
+            if sd < 10.0:   # ignore if Solar Distance < 10°
+                ld_pm[i] = r"sd \textless 10.0"
+                continue
+
+#            if idx > 0 and i in set(NewMoonHours):
+            if i in set(NewMoonHours):
+                ld_pm[i] = "newMoon"   # enter in List but don't count as Data
+                continue     # unmeasurable due to New Moon
+
+##          Following idea dropped in favor of checking hourly rate of change of hourly LD delta
+##            if idx > 0 and ld < 7.0: continue    # moon - planet is at least 7°
+
+            if idx > 0:     # if a planet (i.e. if not the sun)
+                ##if ra_p.hours[i+1] > ra_m.hours[i+1]:     # if RA(planet) > RA(moon)
+                if cmp_ra(ra_p.hours[i+2], ra_m.hours[i+2]):    # if RA(planet) > RA(moon)
+                    #if ra_p.hours[i+1] > ra_sun[i+1] > ra_m.hours[i+1]:   # if sun in-between...
+                    if cmp_ra(ra_p.hours[i+2], ra_sun[i+2]) and cmp_ra(ra_sun[i+2], ra_m.hours[i+2]):
+                        ld_pm[i] = "planet-sun-moon"
+                        continue
+                else:
+                    #if ra_p.hours[i+1] < ra_sun[i+1] < ra_m.hours[i+1]:   # if sun in-between...
+                    if cmp_ra(ra_m.hours[i+2], ra_sun[i+2]) and cmp_ra(ra_sun[i+2], ra_p.hours[i+2]):
+                        ld_pm[i] = "moon-sun-planet"
+                        continue
+
+            if ld >= 120.0:
+                ld_pm[i] = "ld $\geq$ 120"
+                continue
+
+            ra_diff = diff_ra(ra_m.hours[i+2], ra_p.hours[i+2])   # RA difference sun/planet-moon
+            if not (-24 < ra_diff < 24): raise Exception("ra_diff outside limits")
+            ra_pm[i] = fmtdeg(ra_diff*15)
+            if ld_delta > ld_delta_max: ld_delta_max = ld_delta
+            ld_last = ld
+            ld_last_ra_diff = ra_diff
+            if ld_first == 0.0:
+                ld_first = ld
+                ld_first_ra_diff = ra_diff
+            if ld > ld_max:
+                ld_max = ld
+                ld_max_ra = ra_diff
+                ra_moon_max = ra_m.hours[i+2]
+                ra_planet_max = ra_p.hours[i+2]
+                ld_max_i = i
+            if ld < ld_min:
+                ld_min = ld
+                ld_min_ra = ra_diff
+                ld_min_i = i
+            if ld < 120:
+                # add the LD angle to the list
+                n += 1
+                ld_pm[i] = fmtdeg(ld)
+
+        # Unless we have a New Moon, choose to include 3 hour-values minimum per sun/planet per day
+        # (because a day could have 22 hours of New Moon, thus 2 valid LD values would be excluded)
+        if len(NewMoonHours) == 0 and n < 3: n = 0
+        maxLDdelta_per_planet[idx] = ld_delta_max
+        LDhours_per_planet[idx] = n
+        mag_per_planet[idx] = Vmag
+        if n > 0:
+            firstLD_per_planet[idx] = math.copysign(ld_first, ld_first_ra_diff)
+            lastLD_per_planet[idx] = math.copysign(ld_last, ld_last_ra_diff)
+            maxLD_per_planet[idx] = math.copysign(ld_max, ld_max_ra)
+            minLD_per_planet[idx] = math.copysign(ld_min, ld_min_ra)
+            #print("Moon {:2d}h RA: {}   {} RA: {}".format(ld_max_i, ra_moon_max, name, ra_planet_max))
+        else:       # if no valid LD data
+            firstLD_per_planet[idx] = 1000.0    # invalid value
+            maxLD_per_planet[idx] = 1000.0      # invalid value
+            minLD_per_planet[idx] = 1000.0      # invalid value
+
+        # List with these values per planet ...
+        # [0] - sun/planet name
+        # [1] - OBJECT: sun/planet RA (25 values: -1h to 23h)
+        # [2] - OBJECT: moon RA  (25 values: -1h to 23h)
+        # [3] - max LD in degrees
+        # [4] - RA difference sun/planet-moon at hour of max LD
+        # [5] - LIST of LD per hour (24 values: oh to 23h)
+        out.append([name,ra_p,ra_m,ld_max,ld_max_ra,ld_pm])       # list of values per planet and per hour
+
+        if config.debug_planet_data:
+            sha00 = (- ra_p.hours[2]) * 15
+            if sha00 < 0: sha00 += 360
+            print("\n{} SHA at 0h = {:.1f} LDmax = {:.3f} with RAdiff = {:.3f}".format(name,sha00,ld_max,ld_max_ra))
+            print(name,ld_pm)
+
+    # List of tuples with these values per planet ...
+    # [0] - sun/planet index: 0 = sun and -1 to -4 for Venus, Mars, Jupiter, Saturn
+    # [1] - first valid LD per sun/planet (-ve if lower RA than Moon; +ve if higher)
+    # [2] - last  valid LD per sun/planet (-ve if lower RA than Moon; +ve if higher)
+    # [3] - max hourly LD delta per sun/planet
+    # [4] - number of hours (0 to 24) with a valid LD value
+    # [5] - sun/planet magnitude (very approximate)
+    tup = list(zip(l_idx, firstLD_per_planet, lastLD_per_planet, maxLDdelta_per_planet, LDhours_per_planet, mag_per_planet))
+
+    return out, tup, NewMoonHours, ra_m
+
+def cmp_ra(ra_obj, ra_moon):
+    # compare RA of two objects and return True if ra_obj > ra_moon
+    #    i.e. if (ra_obj - ra_moon) < (ra_moon - ra.obj)
+    # taking into consideration that values are circular from 0 to 24 hours
+    #    e.g. RA 1 hour > RA 23 hours (max difference will be 8 hours or 120°)
+
+    ang = abs(ra_obj - ra_moon)
+    flip = True if ang > 12 else False
+    
+    if not flip:
+        return (ra_obj > ra_moon)
+    else:
+        return (ra_moon > ra_obj)
+
+def diff_ra(ra_moon, ra_obj):
+    # return the signed difference in RA of the smaller angle
+    #         (ra_obj - ra_moon) or (ra_moon - ra.obj)
+    # taking into consideration that values are circular from 0 to 24 hours
+    #    e.g. RA 1 hour - RA 23 hours = +2 hours (max difference will be ±8 hours or ±120°)
+
+    ang = abs(ra_obj - ra_moon)
+    flip = True if ang > 12 else False
+    
+    if not flip:
+        return ra_moon - ra_obj
+    else:
+        if ra_moon > ra_obj:
+            return ra_moon - 24 - ra_obj
+        else:
+            return ra_moon + 24 - ra_obj
+
+def ld_stars(d, NewMoonHours, ra_sun):        # used in moontab
+    # 'out' returns a list with: name, SHA, Dec, max LD angle, max RA, list of LD per hour of day
+    #       for 22 navigational stars on epoch of date.
+    # 'tup' returns a list of tuples with: index to list within 'out', max LD angle with sign
+    #       indicating if East (-ve) or West (+ve) of the moon 
+    #       (120° max; invalid stars have 1000° - these have no data)
+
+    out = []
+    ra_s = [None] * 22          # RA per star
+    l_idx = [i for i in range(1, 23)]   # 22 index values (1 to 22)
+    firstLD_per_star = [None] * 22      # 21 navigational stars + Polaris
+    lastLD_per_star = [None] * 22       # 21 navigational stars + Polaris
+    maxLD_per_star = [None] * 22        # 21 navigational stars + Polaris
+    minLD_per_star = [None] * 22        # 21 navigational stars + Polaris
+    maxLDdelta_per_star = [None] * 22   # 21 navigational stars + Polaris
+    LDhours_per_star = [None] * 22      # 21 navigational stars + Polaris
+    mag_per_star = [None] * 22          # 21 navigational stars + Polaris
+
+    # 26 hours/day need to be calculated: 
+    #     23h on 'day-1' is needed for hourly LD delta at 0h on 'day'
+    #     22h on 'day-1' is needed for rate of change of hourly LD delta at 0h on 'day'
+    t = ts.ut1(d.year, d.month, d.day, hour_of_day26, 0, 0)
+    t00 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)           # observe at midnight
+    #t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)          # observe at noon
+    e = earth.at(t)
+    pos_m = e.observe(moon).apparent()
+    ra_m  = pos_m.radec(epoch='date')[0]
+    pos_H = e.observe(sun).apparent()
+
+    ns_idx = 0      # nav star index
+    for line in navstars.strip().split('\n'):
+        ld_sm = ['' for x in range(24)]     # list of values per hour
+        #ra_sm = ['' for x in range(24)]
+        x1 = line.index(',')
+        name = line[:x1]
+        line = line[x1+1:]
+        x2 = line.index(',')
+        objnum = line[:x2]
+        line = line[x2+1:]
+        x3 = line.index(',')
+        HIPnum = line[:x3]
+        Hpmag = float(line[x3+1:])          # Hipparcos magnitude
+
+        star = Star.from_dataframe(df.loc[int(HIPnum)])
+        pos_s = earth.at(t00).observe(star).apparent()
+        sep_sm = pos_m.separation_from(pos_s)
+        ra, dec, distance = pos_s.radec(epoch='date')
+        ra_h = ra.hours
+        sep_sH = pos_H.separation_from(pos_s)
+
+        #sha  = fmtgha(0, ra.hours)
+        #decl = fmtdeg(dec.degrees)
+
+        n = 0                   # count valid moon-star LD angles (e.g. under 120°)
+        ld_first = 0.0          # first valid LD
+        ld_last = 0.0           # last valid LD
+        ld_max = 0.0            # maximum LD
+        ld_min = 400.0          # minimum LD (invalid value initially)
+        ld_max_ra = 0.0         # direction from moon (right or left)
+        ld_min_ra = 0.0         # direction from moon (right or left)
+        ld_delta_max = 0.0      # max hourly change in LD
+
+        # negative hours are chosen so as to calculate rate of change of hourly LD delta for hour "0":
+        #   = ld_delta[hour0-hour-1]    versus    prev_ld_delta[hour-1-hour-2]
+
+        for i in range(-2, 24):
+            ld = sep_sm.degrees[i+2]    # Lunar Distance
+            sd = sep_sH.degrees[i+2]    # Solar Distance
+            if i == -2:     # if i = -2
+                prev_ld = ld    # initialize 'previous lunar distance'...
+                prev_ld_delta = 10.0    # fake initial value
+                continue        # ... only!!
+            if i < 0:       # if i = -1
+                ld_delta = abs(ld - prev_ld)    # in degrees
+                prev_ld = ld
+                prev_ld_delta = ld_delta
+                continue        # ... only!!
+
+            # if i >= 0
+            skip = False
+            #if ns_idx == 21: print(name, ld, abs(ld - prev_ld))
+            ld_delta = abs(ld - prev_ld)    # in degrees
+            if ld_delta < 0.25: 
+                skip = True     # ensure LD delta > 15' of arc
+                ld_sm[i] = r"ld/h \textless 15'"
+            else:
+                # skip if rate of change of ld_delta too high (non-linear)
+                chg = ld_delta - prev_ld_delta
+                if abs(chg) < 8:    # first value is fake (hour2-hour1) vs (hour1-hour0)
+                    if abs(chg) > 0.016:    # cutoff chosen empirically
+                        #print("{}: {}h ld_delta change = {}".format(name,i,chg))
+                        ld_sm[i] = r"ld/h rate \textgreater 0.016"
+                        skip = True
+            prev_ld_delta = ld_delta
+            prev_ld = ld
+            if skip: continue     # ignore as ld hourly rate < 15' of arc
+
+            if sd < 10.0:   # ignore if Solar Distance < 10°
+                ld_sm[i] = r"sd \textless 10.0"
+                continue
+
+            if i in set(NewMoonHours):
+                ld_sm[i] = "newMoon"   # enter in List but don't count as Data
+                continue     # unmeasurable due to New Moon
+
+##          Following idea dropped in favor of checking hourly rate of change of hourly LD delta
+##            if ld < 8.0: continue    # moon - star is at least 8°
+
+            ##if ra.hours > ra_m.hours[i+1]:     # if RA(star) > RA(moon)
+            if cmp_ra(ra.hours, ra_m.hours[i+2]):   # if RA(star) > RA(moon)
+            #    if ra.hours > ra_sun[i+1] > ra_m.hours[i+1]:   # if sun in-between...
+                if cmp_ra(ra.hours, ra_sun[i+2]) and cmp_ra(ra_sun[i+2], ra_m.hours[i+2]):
+                    ld_sm[i] = "star-sun-moon"
+                    continue
+            else:
+            #    if ra.hours < ra_sun[i+1] < ra_m.hours[i+1]:   # if sun in-between...
+                if cmp_ra(ra_m.hours[i+2], ra_sun[i+2]) and cmp_ra(ra_sun[i+2], ra.hours):
+                    ld_sm[i] = "moon-sun-star"
+                    continue
+
+            if ld >= 120.0: 
+                ld_sm[i] = "ld $\geq$ 120"
+                continue
+            if ld >= 120.0: continue
+
+            ra_diff = diff_ra(ra_m.hours[i+2], ra.hours)    # RA difference sun/planet-moon
+            #if ns_idx == 5: print("ra_diff of {} = {}".format(ns_idx, ra_diff))
+            if not (-24 < ra_diff < 24): raise Exception("ra_diff outside limits")
+            if ld_delta > ld_delta_max: ld_delta_max = ld_delta
+            ld_last = ld
+            ld_last_ra_diff = ra_diff
+            if ld_first == 0.0:
+                ld_first = ld
+                ld_first_ra_diff = ra_diff
+            if ld > ld_max:
+                ld_max = ld
+                ld_max_ra = ra_diff
+                ra_moon_max = ra_m.hours[i+2]
+                ra_star_max = ra.hours
+                ld_max_i = i
+                #if ns_idx == 21: print("i = {} ld_max = {}".format(i,ld_max))
+            if ld < ld_min:
+                ld_min = ld
+                ld_min_ra = ra_diff
+                ld_min_i = i
+            if ld < 120:
+                # add the LD angle to the list
+                n += 1
+                ld_sm[i] = fmtdeg(ld)
+
+        # Unless we have a New Moon, choose to include 3 hour-values minimum per sun/planet per day
+        # (because a day could have 22 hours of New Moon, thus 2 valid LD values would be excluded)
+        if len(NewMoonHours) == 0 and n < 3: n = 0
+        maxLDdelta_per_star[ns_idx] = ld_delta_max
+        LDhours_per_star[ns_idx] = n
+        mag_per_star[ns_idx] = Hpmag
+        if n > 0:
+            firstLD_per_star[ns_idx] = math.copysign(ld_first, ld_first_ra_diff)
+            lastLD_per_star[ns_idx] = math.copysign(ld_last, ld_last_ra_diff)
+            maxLD_per_star[ns_idx] = math.copysign(ld_max, ld_max_ra)
+            minLD_per_star[ns_idx] = math.copysign(ld_min, ld_min_ra)
+            #print("Moon {:2d}h RA: {}   {} RA: {}".format(ld_max_i, ra_moon_max, name, ra_star_max))
+        else:       # if no valid LD data
+            firstLD_per_star[ns_idx] = 1000.0   # invalid value
+            maxLD_per_star[ns_idx] = 1000.0     # invalid value
+            minLD_per_star[ns_idx] = 1000.0     # invalid value
+
+        # List with these values per planet ...
+        # [0] - star name
+        # [1] - OBJECT: star RA (25 values: -1h to 23h)
+        # [2] - OBJECT: moon RA  (25 values: -1h to 23h)
+        # [3] - max LD in degrees
+        # [4] - RA difference star-moon at hour of max LD
+        # [5] - LIST of LD per hour (24 values: oh to 23h)
+        out.append([name,ra_h,ra_m,ld_max,ld_max_ra,ld_sm])   # list of values per star and per hour
+        ns_idx += 1
+
+        if config.debug_star_data:
+            sha00 = (- ra_h) * 15
+            if sha00 < 0: sha00 += 360
+            print("\n{} SHA at 0h = {:.1f} LDmax = {:.3f} with RAdiff = {:.3f}".format(name,sha00,ld_max,ld_max_ra))
+            print(name,ld_sm)
+
+    # list of tuples with these values per star ...
+    # [0] - star index: 1 to 22
+    # [1] - first valid LD per star (-ve if lower RA than Moon; +ve if higher)
+    # [2] - last  valid LD per star (-ve if lower RA than Moon; +ve if higher)
+    # [3] - max hourly LD delta per star
+    # [4] - number of hours (0 to 24) with a valid LD value
+    # [5] - star magnitude ('Hipparcos magnitude')
+    tup = list(zip(l_idx, firstLD_per_star, lastLD_per_star, maxLDdelta_per_star, LDhours_per_star, mag_per_star))
+
+    return out, tup

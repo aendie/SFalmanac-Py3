@@ -17,7 +17,7 @@
 #   You should have received a copy of the GNU General Public License along
 #   with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# Standard library imports
+###### Standard library imports ######
 import os
 import sys, site
 from sysconfig import get_path  # new in python 3.2
@@ -25,8 +25,9 @@ import time
 import datetime
 from multiprocessing import cpu_count
 
-# Local application imports
-import config   # !! execute the next 3 lines before importing from nautical/eventtables !!
+###### Local application imports ######
+import config
+# !! execute the next 3 lines before importing from nautical/eventtables !!
 config.WINpf = True if sys.platform.startswith('win') else False
 config.LINUXpf = True if sys.platform.startswith('linux') else False
 config.MACOSpf = True if sys.platform == 'darwin' else False
@@ -37,6 +38,7 @@ from alma_skyfield import init_sf
 from nautical import almanac
 from suntables import sunalmanac
 from eventtables import maketables
+from lunardist_tables import makeLDtables
 from increments import makelatex
 
 
@@ -191,7 +193,7 @@ def checkCoreCount():       # only called when config.MULTIpr == True
         print("\nNOTE: only {} logical processors are available for parallel processessing".format(config.CPUcores))
 
 
-##Main##
+###### Main Program ######
 if __name__ == '__main__':      # required for Windows multiprocessing compatibility
     if sys.version_info[0] < 3:
         raise Exception("This runs only with Python 3")
@@ -201,7 +203,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
     for i in list(range(1, len(sys.argv))):
         if sys.argv[i] not in validargs:
             print("Invalid argument: {}".format(sys.argv[i]))
-            print("nValid command line arguments are:")
+            print("\nValid command line arguments are:")
             print(" -v   ... to send pdfTeX output to the terminal")
             print(" -log ... to keep the log file")
             print(" -tex ... to keep the tex file")
@@ -295,17 +297,18 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
     # ------------ process user input ------------
 
     s = input("""\n  What do you want to create?:\n
-    1   Nautical Almanac   (for a day/month/year)
-    2   Sun tables only    (for a day/month/year)
-    3   Event Time tables  (for a day/month/year)
-    4   Nautical almanac   -  6 days from today
-    5   Sun tables only    - 30 days from today
-    6   Event Time tables  -  6 days from today
-    7   "Increments and Corrections" tables (static data)
+    1   Nautical Almanac      (for a day/month/year)
+    2   Sun tables only       (for a day/month/year)
+    3   Event Time tables     (for a day/month/year)
+    4   Lunar Distance tables (for a day/month/year)
+    5   Nautical almanac      -  6 days from today
+    6   Sun tables only       - 30 days from today
+    7   Event Time tables     -  6 days from today
+    8   "Increments and Corrections" tables (static data)
 """)
 
-    if s in set(['1', '2', '3', '4', '5', '6', '7']):
-        if int(s) < 4:
+    if s in set(['1', '2', '3', '4', '5', '6', '7', '8']):
+        if int(s) < 5:
             daystoprocess = 0
             ss = input("""  Enter as numeric digits:\n
     - starting date as 'DDMMYYYY'
@@ -339,13 +342,11 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                     sys.exit()
 
                 if len(ss) == 2:
-                    entireMth = True
                     dd = "01"
                     mm = ss[0:2]
                     check_mth(mm)
                     if int(mm) < d.month: yy = str(d.year + 1)
                 elif len(ss) == 3:
-                    entireMth = True
                     dd = "01"
                     mm = ss[1:3]
                     check_mth(mm)
@@ -376,6 +377,10 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 first_day = datetime.date(int(yy), int(mm), int(dd))
                 d = first_day
 
+                if len(ss) in [2,3]:    # process entire month
+                    entireMth = True
+                    daystoprocess = (d.replace(month = d.month%12 + 1, day = 1)-datetime.timedelta(days=1)).day
+
                 if not entireYr and not entireMth and daystoprocess == 0:
                     daystoprocess = 1       # default
                     nn = input("""  Enter number of days to process from starting date:
@@ -389,7 +394,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                             print("ERROR: 'Days to process' not <= 300")
                             sys.exit()
 
-        if s != '3' and int(s) <= 5:
+        if s in set(['1', '2', '5', '6']):
             tsin = input("""  What table style is required?:\n
     t   Traditional
     m   Modern
@@ -406,16 +411,31 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             else:
                 DecFmt = '[old]'
 
-        sday = "{:02d}".format(d.day)       # sday = "%02d" % d.day
-        smth = "{:02d}".format(d.month)     # smth = "%02d" % d.month
-        syr  = "{}".format(d.year)          # syr  = "%s" % d.year
+        sday = "{:02d}".format(d.day)
+        smth = "{:02d}".format(d.month)
+        syr  = "{}".format(d.year)
         symd = syr + smth + sday
         sdmy = sday + "." + smth + "." + syr
-        #print(datetime.datetime.now().time())
+
+        if int(s) == 4:
+            strat = config.defaultLDstrategy
+            if strat == '':
+                strat = input("""  Select a strategy for choosing celestial bodies:\n
+    A   objects closest to the Moon
+    B   with highest hourly LD delta
+    C   with brightest navigational stars
+""")
+
+            strat = strat.upper()
+            if len(strat) == 0:
+                strat = 'B'        # pick a default
+            if not strat in ["A", "B", "C"]:
+                print("Error! Invalid selection")
+                sys.exit(0)
 
     # ------------ create the desired tables ------------
 
-        if s == '1' and entireYr:        # Nautical Almanac (for a year)
+        if s == '1' and entireYr:        # Nautical Almanac (for a year/years)
             print("Take a break - this computer needs some time for cosmic meditation.")
     ##        config.initLOG()		# initialize log file
             for yearint in range(int(yearfr),int(yearto)+1):
@@ -499,7 +519,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
     ##        config.closeLOG()     # close log after the for-loop
 
-        elif s == '2' and entireYr:     # Sun Tables (for a year)
+        elif s == '2' and entireYr:     # Sun Tables (for a year/years)
             for yearint in range(int(yearfr),int(yearto)+1):
                 year = "{:4d}".format(yearint)  # year = "%4d" %yearint
                 msg = "\nCreating the sun tables for the year {}".format(year)
@@ -549,7 +569,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             tidy_up(fn, keeplog, keeptex)
             if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 
-        elif s == '3' and entireYr:      # Event Time tables  (for a year)
+        elif s == '3' and entireYr:      # Event Time tables  (for a year/years)
             print("Take a break - this computer needs some time for cosmic meditation.")
             for yearint in range(int(yearfr),int(yearto)+1):
                 if config.MULTIpr: checkCoreCount()
@@ -605,7 +625,50 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             tidy_up(fn, keeplog, keeptex)
             if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 
-        elif s == '4':      # Nautical almanac   -  6 days from today
+        elif s == '4':  # Lunar Distance tables
+            papersize = config.pgsz
+            if entireYr: # Lunar Distance tables (for a year/years)
+                for yearint in range(int(yearfr),int(yearto)+1):
+                    start = time.time()
+                    year = "{:4d}".format(yearint)  # year = "%4d" %yearint
+                    msg = "\nCreating the lunar distance tables for the year {}".format(year)
+                    print(msg)
+                    daystoprocess = (datetime.date(yearint+1, 1, 1) - datetime.date(yearint, 1, 1)).days
+                    filename = "{}-lunar-{}".format(papersize,year)
+                    outfile = open(filename + ".tex", mode="w", encoding="utf8")
+                    first_day = datetime.date(yearint, 1, 1)
+                    outfile.write(makeLDtables(first_day,strat,daystoprocess,entireMth,entireYr))
+                    outfile.close()
+                    stop = time.time()
+                    msg2 = "execution time = {:0.2f} seconds".format(stop-start)
+                    print(msg2)
+                    makePDF(listarg, filename)
+                    tidy_up(filename, keeplog, keeptex)
+            else:
+                start = time.time()
+                if entireMth:
+                    filename = "{}-lunar-{}".format(papersize,syr + '-' + smth)
+                    msg = "\nCreating the lunar distance tables for {}".format(syr + '-' + smth)
+                else:
+                    filename = "{}-lunar-{}".format(papersize,symd)
+                    if daystoprocess > 1:   # filename as 'from date'-'to date'
+                        lastdate = first_day + datetime.timedelta(days=daystoprocess-1)
+                        lymd = lastdate.strftime("-%Y%m%d")
+                        filename += lymd
+                        msg = "\nCreating the lunar distance tables from {}".format(symd)
+                    else: msg = "\nCreating the lunar distance tables for {}".format(symd)
+                print(msg)
+                deletePDF(f_prefix + filename)
+                outfile = open(filename + ".tex", mode="w", encoding="utf8")
+                outfile.write(makeLDtables(first_day,strat,daystoprocess,entireMth,entireYr))
+                outfile.close()
+                stop = time.time()
+                msg2 = "execution time = {:0.2f} seconds\n".format(stop-start)
+                print(msg2)
+                makePDF(listarg, filename)
+                tidy_up(filename, keeplog, keeptex)
+
+        elif s == '5':      # Nautical almanac   -  6 days from today
     ##        config.initLOG()		# initialize log file
             if config.MULTIpr: checkCoreCount()
             start = timer_start()
@@ -627,7 +690,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             makePDF(listarg, fn)
             tidy_up(fn, keeplog, keeptex)
 
-        elif s == '5':      # Sun tables only    - 30 days from today
+        elif s == '6':      # Sun tables only    - 30 days from today
             msg = "\nCreating the sun tables - from {}".format(sdmy)
             print(msg)
             ff = "STtrad_" if config.tbls != 'm' else "STmod_"
@@ -642,7 +705,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             makePDF(listarg, fn)
             tidy_up(fn, keeplog, keeptex)
 
-        elif s == '6':      # Event Time tables  -  6 days from today
+        elif s == '7':      # Event Time tables  -  6 days from today
             if config.MULTIpr: checkCoreCount()
             start = timer_start()
             msg = "\nCreating event time tables - from {}".format(sdmy)
@@ -659,7 +722,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             makePDF(listarg, fn)
             tidy_up(fn, keeplog, keeptex)
 
-        elif s == '7':
+        elif s == '8':
             msg = "\nCreating the Increments and Corrections tables"
             print(msg)
             fn = "Inc"
@@ -672,4 +735,4 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             tidy_up(fn, keeplog, keeptex)
 
     else:
-        print("Error! Choose 1, 2, 3, 4, 5, 6 or 7")
+        print("Error! Choose 1, 2, 3, 4, 5, 6, 7 or 8")

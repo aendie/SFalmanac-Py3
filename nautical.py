@@ -41,14 +41,14 @@
 #       The following code now uses the 'tabular' table style without any
 #       column width specifiers - thus table widths vary slightly from page to page.
 
-# Standard library imports
+###### Standard library imports ######
 from datetime import datetime, timedelta
 import sys			# required for .stdout.write()
 from math import cos as cos
 from math import copysign as copysign
 from math import pi as pi
 
-# Local application imports
+##### Local application imports ######
 from alma_ephem import magnitudes
 import config
 if config.MULTIpr:  # in multi-processing mode ...

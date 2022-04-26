@@ -27,19 +27,19 @@
 #                variables and C arrays. A NumPy extension adds shared NumPy arrays.
 # ----------------------------------------------------------------------------------
 
-# Standard library imports
+###### Standard library imports ######
 from datetime import datetime, timedelta
 from time import time         # 00000 - stopwatch elements
 from math import degrees, atan, tan, pi
 
-# Third party imports
+###### Third party imports ######
 from skyfield.api import load
 from skyfield.api import Topos, Star
 from skyfield import almanac
 from skyfield.nutationlib import iau2000b
 #from skyfield.data import hipparcos
 
-# Local application imports
+###### Local application imports ######
 import config
 
 #----------------------

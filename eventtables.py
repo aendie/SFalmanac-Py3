@@ -21,11 +21,11 @@
 #       will be removed from Python at some later time. See:
 # https://docs.python.org/3/whatsnew/3.0.html#pep-3101-a-new-approach-to-string-formatting
 
-# Standard library imports
+###### Standard library imports ######
 from datetime import datetime, timedelta
 import sys			# required for .stdout.write()
 
-# Local application imports
+###### Local application imports ######
 import config
 if config.MULTIpr:      # in multi-processing mode ...
     # ------------------------------------------------------
