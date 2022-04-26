@@ -150,7 +150,7 @@ BUGFIX: Event Time tables no longer fail on 24.08.2063 (Lower Transit).
 &emsp;Typesetting is done typically by MiKTeX or TeX Live.  
 &emsp;Here are the requirements/recommendations:
 
-* Python v3.4 or higher (v3.9.x is recommended)
+* Python v3.4 or higher (v3.10.x is recommended)
 * Skyfield >= 1.31 (the latest is recommended; see the Skyfield Changelog)
 * Pandas >= 1.0 (to decode the Hipparcos catalog; tested: 1.0.3 and 1.1.4)
 * Ephem >= 3.7.6 (required for some planet magnitudes)
