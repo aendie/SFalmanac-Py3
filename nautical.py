@@ -48,7 +48,7 @@ from math import cos as cos
 from math import copysign as copysign
 from math import pi as pi
 
-##### Local application imports ######
+###### Local application imports ######
 from alma_ephem import magnitudes
 import config
 if config.MULTIpr:  # in multi-processing mode ...
@@ -67,9 +67,9 @@ else:
 UpperLists = [[], [], []]    # moon GHA per hour for 3 days
 LowerLists = [[], [], []]    # moon colong GHA per hour for 3 days
 
-#----------------------
-#   internal methods
-#----------------------
+#------------------------
+#   internal functions
+#------------------------
 
 def fmtdate(d):
     if config.pgsz == 'Letter': return d.strftime("%m/%d/%Y")

@@ -41,7 +41,7 @@ defaultLDstrategy = 'B'   # 'A', 'B', 'C', or '' to ask user for desired strateg
 # ================ DO NOT EDIT LINES BELOW HERE ================
 
 # Docker-related stuff...
-dockerized = False   # 'True' to build this app to run in a Docker-Linux container
+dockerized = False  # 'True' to build this app to run in a Docker-Linux container
 # NOTE: config.py has been "Dockerized" by use of environment variables in .env
 
 # Docker Container subfolder for creating PDF files (and optionally a LOG file)
@@ -51,6 +51,7 @@ dockerized = False   # 'True' to build this app to run in a Docker-Linux contain
 docker_pdf = "tmp"
 docker_prefix  = docker_pdf + "/" if dockerized else ""  # docker image is based on Linux
 docker_postfix = "/" + docker_pdf if dockerized else ""  # docker image is based on Linux
+if dockerized: MULTIpr = False  # Linux creates 12 x finals2000A.all if 'True'
 # --------------------------------------------------------------
 
 # global variables initialized during main program startup (and on every spawned process)
@@ -72,10 +73,12 @@ moonDataFound = 0   # moon daily data seeks found in transient data store
 moonHorizonSeeks = 0   # count of moon continuously above/below horizon seeks
 moonHorizonFound = 0   # moon continuously above/below horizon seeks found in transient data store
 
-# define global variables for Lunar Distance calculations...
-debug_strategy = False
-debug_star_data = False
-debug_planet_data = False
+# define global variables for Lunar Distance tables and charts
+# 'True' on 'debug_....' variables expands the terminal/console output
+debug_strategy = False   # 'True' also prints the reason LD values are excluded *within* the page tables
+debug_star_data = False     # console output: Lunar Distance star-moon per hour
+debug_planet_data = False   # console output: Lunar Distance planet-moon per hour
+debug_showLD = False        # console output: Lunar Distance line colours
 
 # list of latitudes to include for Sunrise/Sunset/Twilight/Moonrise/Moonset...
 lat = [72,70,68,66,64,62,60,58,56,54,52,50,45,40,35,30,20,10,0,-10,-20,-30,-35,-40,-45,-50,-52,-54,-56,-58,-60]

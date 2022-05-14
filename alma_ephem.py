@@ -20,7 +20,7 @@
 # This contains one function to calculate planet magnitudes...
 # ... because these are not in Skyfield yet
 
-# Third party imports...
+###### Third party imports ######
 import ephem        # required only for planet magnitudes
 
 ephem_venus   = ephem.Venus()

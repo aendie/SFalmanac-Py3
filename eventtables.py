@@ -50,9 +50,9 @@ else:
 UpperLists = [[], []]    # moon GHA per hour for 2 days
 LowerLists = [[], []]    # moon colong GHA per hour for 2 days
 
-#----------------------
-#   internal methods
-#----------------------
+#------------------------
+#   internal functions
+#------------------------
 
 def fmtdate(d):
     if config.pgsz == 'Letter': return d.strftime("%m/%d/%Y")
@@ -466,7 +466,7 @@ def pages(first_day, dtp, ts):
 #   external entry point
 #--------------------------
 
-def maketables(first_day, dtp, ts):
+def makeEVtables(first_day, dtp, ts):
     # dtp = 0 if for entire year; = -1 if for entire month; else days to print
 
     # make tables starting from first_day

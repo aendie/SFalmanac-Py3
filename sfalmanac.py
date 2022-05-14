@@ -35,12 +35,23 @@ config.CPUcores = cpu_count()
 # NOTE: Multiprocessing on Windows using 'spawn' requires all variables modified
 #       and stored in config.py to be re-calculated for every spawned process!
 from alma_skyfield import init_sf
-from nautical import almanac
+from ld_skyfield import ld_init_sf
+from nautical import almanac            # multiprocessing supported
 from suntables import sunalmanac
-from eventtables import maketables
-from lunardist_tables import makeLDtables
+from eventtables import makeEVtables    # multiprocessing supported
+from ld_tables import makeLDtables
+from ld_charts import makeLDcharts
 from increments import makelatex
 
+#   Some modules in SFalmanac have been ported from the original source code ...
+#   this may explain why sections of code are not consolidated. Furthermore two
+#   separate Skyfield modules are used with obvious repetition of code. This
+#   simplifies porting from the original code for development and testing.
+
+def toUnix(fn):
+    if config.dockerized or config.LINUXpf or config.MACOSpf:
+        fn = fn.replace("(","[").replace(")","]")
+    return fn
 
 def deletePDF(filename):
     if os.path.exists(filename + ".pdf"):
@@ -53,8 +64,8 @@ def deletePDF(filename):
         os.remove(filename + ".tex")
 
 def makePDF(pdfcmd, fn, msg = ""):
-    print()     # blank line before "This is pdfTex, Version 3.141592653...
     command = 'pdflatex {}'.format(pdfcmd + fn + ".tex")
+    print()     # blank line before "This is pdfTex, Version 3.14159265...
     if pdfcmd == "":
         os.system(command)
         print("finished" + msg)
@@ -86,6 +97,12 @@ def check_mth(mm):
     if not 1 <= int(mm) <= 12:
         print("ERROR: Enter month between 01 and 12")
         sys.exit()
+
+def check_exists(fn):
+    # check a required file exist to avoid a more obscure error in pdfTeX if "-v" not used...
+    if not os.path.exists(fn):
+        print("Error - missing file: {}".format(fn))
+        sys.exit(0)
 
 def check_date(year, month, day):
     yy = int(year)
@@ -194,23 +211,32 @@ def checkCoreCount():       # only called when config.MULTIpr == True
 
 
 ###### Main Program ######
+
 if __name__ == '__main__':      # required for Windows multiprocessing compatibility
     if sys.version_info[0] < 3:
         raise Exception("This runs only with Python 3")
 
     # command line arguments...
-    validargs = ['-v', '-log', '-tex']
+    validargs = ['-v', '-q', '-log', '-tex', '-sky', '-d1', '-d2', '-d3', '-d4']
+    # (the 4 dummy arguments d1 d2 d3 d4 are specified in 'dockerfile')
     for i in list(range(1, len(sys.argv))):
         if sys.argv[i] not in validargs:
             print("Invalid argument: {}".format(sys.argv[i]))
             print("\nValid command line arguments are:")
             print(" -v   ... to send pdfTeX output to the terminal")
+            print(" -q   ... quiet mode for LD charts")
             print(" -log ... to keep the log file")
             print(" -tex ... to keep the tex file")
+            print(" -sky ... stars only in LD charts")
             sys.exit(0)
+
+    # NOTE: pdfTeX 3.14159265-2.6-1.40.21 (TeX Live 2020/Debian), as used in the Docker
+    #       Image, does not have the options "-quiet" or "-verbose".
     listarg = "" if "-v" in set(sys.argv[1:]) else "-interaction=batchmode -halt-on-error "
     keeplog = True if "-log" in set(sys.argv[1:]) else False
     keeptex = True if "-tex" in set(sys.argv[1:]) else False
+    quietmode = True if "-q" in set(sys.argv[1:]) else False
+    onlystars = True if "-sky" in set(sys.argv[1:]) else False
 
     d = datetime.datetime.utcnow().date()
     first_day = datetime.date(d.year, d.month, d.day)
@@ -223,7 +249,8 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
     ephERR = False
     if config.dockerized:
         docker_main = os.getcwd()
-        spad = docker_main + "/astro-data/"
+        spad = docker_main + "/astro-data/" # path to bsp/all/dat in the Docker Image
+        spdf = docker_main + "/"            # path to pdf/png/jpg in the Docker Image
         config.pgsz = os.getenv('PGSZ', config.pgsz)
         config.moonimg = os.getenv('MOONIMG', str(config.moonimg))
         config.ephndx = os.getenv('EPHNDX', str(config.ephndx))
@@ -239,22 +266,12 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             config.ageIERS = int(config.ageIERS)
             if config.ageIERS <= 0:
                 ageERR = True
-        stdt = os.getenv('SDATE', 'None')
-        if stdt != 'None':      # for testing a specific date
-            try:
-                first_day = datetime.date(int(stdt[0:4]), int(stdt[5:7]), int(stdt[8:10]))
-            except:
-                print("Invalid date format for SDATE in .env: {}".format(stdt))
-                sys.exit(0)
-            d = first_day
         err1 = "the Docker .env file"
         err2 = "for MOONIMG in the Docker .env file"
         err3 = "for USEIERS in the Docker .env file"
         err4 = "for AGEIERS in the Docker .env file"
     else:
-        #first_day = datetime.date(2023, 6, 24)	## for testing a specific date ##
-        #d = first_day							## for testing a specific date ##
-        spad = "./"
+        spad = spdf = "./"   # path when executing the GitHub files in a folder
         if config.ephndx not in set([0, 1, 2, 3, 4]):
             ephERR = True
         config.moonimg = str(config.moonimg)
@@ -292,8 +309,6 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
     f_prefix = config.docker_prefix
     f_postfix = config.docker_postfix
 
-    ts = init_sf(spad)     # in alma_skyfield
-
     # ------------ process user input ------------
 
     s = input("""\n  What do you want to create?:\n
@@ -301,32 +316,45 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
     2   Sun tables only       (for a day/month/year)
     3   Event Time tables     (for a day/month/year)
     4   Lunar Distance tables (for a day/month/year)
-    5   Nautical almanac      -  6 days from today
-    6   Sun tables only       - 30 days from today
-    7   Event Time tables     -  6 days from today
-    8   "Increments and Corrections" tables (static data)
+    5   Lunar Distance charts (for a day/month)
+    6   "Increments and Corrections" tables (static data)
 """)
 
-    if s in set(['1', '2', '3', '4', '5', '6', '7', '8']):
+    if s in set(['1', '3', '4']): dnum = 6
+    elif s == '2': dnum = 30
+    else: dnum = 0
+    smalltxt = " (or 'x' for a brief sample)" if dnum > 0 else ""
+    smallmsg = "\n    - or 'x' for {} days from today".format(dnum) if dnum > 0 else ""
+
+    if s in set(['1', '2', '3', '4', '5', '6']):
         if int(s) < 5:
             daystoprocess = 0
-            ss = input("""  Enter as numeric digits:\n
+            ss = input("""  Enter as numeric digits{}:\n
     - starting date as 'DDMMYYYY'
     - or just 'YYYY' (for a whole year)
     - or 'YYYY-YYYY' (for first and last year)
     - or just 'MM' (01 - 12) for the current or a future month
-    - or '-MM' for a previous month (e.g. '-02' is last February)
+    - or '-MM' for a previous month (e.g. '-02' is last February){}
     - nothing for the current day
-""")
+""".format(smalltxt,smallmsg))
+
             sErr = False    # syntax error
             entireMth = False
             entireYr  = False
 
-            if len(ss) == 0:
+            if len(ss) <= 1:
                 daystoprocess = 1
                 if d.year > yrmax:
                     print("!! Only years up to {} are valid!!".format(yrmax))
                     sys.exit(0)
+                if len(ss) == 1:
+                    daystoprocess = dnum
+                    if dnum == 0: sErr = True
+                    if ss.lower() != 'x': sErr = True
+                if sErr:
+                    print("ERROR: Incorrect data or format")
+                    sys.exit()
+
             else:
                 if len(ss) not in [2,3,4,8,9]: sErr = True
                 if len(ss) == 3:
@@ -338,7 +366,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 elif not ss.isnumeric(): sErr = True
 
                 if sErr:
-                    print("ERROR: Enter numeric digits in the correct format")
+                    print("ERROR: Incorrect data or format")
                     sys.exit()
 
                 if len(ss) == 2:
@@ -393,8 +421,76 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                         if daystoprocess > 300:
                             print("ERROR: 'Days to process' not <= 300")
                             sys.exit()
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        elif int(s) == 5:   # for Lunar Distance charts only
+#   Due to the lengthy calculations LD charts for a whole year is not supported.
+            daystoprocess = 0
+            ss = input("""
+  Enter as numeric digits:
+    - starting date as 'DDMMYYYY'
+    - or just 'DDMM' (YYYY = current year)
+    - or just 'MM' (01 - 12) for the current or a future month
+    - or '-MM' for a previous month (e.g. '-02' is last February)
+    - nothing for the current day
+""")
+            sErr = False    # syntax error
+            entireMth = False
+            entireYr  = False
 
-        if s in set(['1', '2', '5', '6']):
+            if len(ss) == 0:
+                daystoprocess = 1
+                if d.year > yrmax:
+                    print("!! Only years up to {} are valid!!".format(yrmax))
+                    sys.exit(0)
+            else:
+                if len(ss) not in [2,3,4,8]: sErr = True
+                if len(ss) == 3 and ss[0] != '-': sErr = True
+                if len(ss) == 3:
+                    if not ss[1:].isnumeric(): sErr = True
+                elif not ss.isnumeric(): sErr = True
+                if sErr:
+                    print("ERROR: Enter numeric digits in the correct format")
+                    sys.exit()
+                if len(ss) == 2:
+                    dd = "01"
+                    mm = ss[0:2]
+                    if int(mm) < d.month: yy = str(d.year + 1)
+                if len(ss) == 3:
+                    dd = "01"
+                    mm = ss[1:3]
+                    if int(mm) >= d.month: yy = str(d.year - 1)
+                elif len(ss) >= 4:
+                    dd = ss[0:2]
+                    mm = ss[2:4]
+                if len(ss) == 8: yy = ss[4:]
+                check_mth(mm)
+                check_date(yy,mm,dd)
+
+                if not (yrmin <= int(yy) <= yrmax):
+                    print("!! Please pick a year between {} and {} !!".format(yrmin,yrmax))
+                    sys.exit(0)
+
+                first_day = datetime.date(int(yy), int(mm), int(dd))
+                d = first_day
+
+                if len(ss) in [2,3]:     # process entire month
+                    entireMth = True
+                    daystoprocess = (d.replace(month = d.month%12 + 1, day = 1)-datetime.timedelta(days=1)).day
+
+                if daystoprocess == 0:
+                    daystoprocess = 1       # default
+                    s = input("""  Enter number of days to process from starting date:
+""")
+                    if len(s) > 0:
+                        if not s.isnumeric():
+                            print("ERROR: Not a number")
+                            sys.exit()
+                        daystoprocess = int(s)
+                        if daystoprocess > 50:
+                            print("ERROR: 'Days to process' not <= 50")
+                            sys.exit()
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        if s in set(['1', '2']):
             tsin = input("""  What table style is required?:\n
     t   Traditional
     m   Modern
@@ -417,7 +513,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
         symd = syr + smth + sday
         sdmy = sday + "." + smth + "." + syr
 
-        if int(s) == 4:
+        if s in set(['4', '5']):
             strat = config.defaultLDstrategy
             if strat == '':
                 strat = input("""  Select a strategy for choosing celestial bodies:\n
@@ -433,9 +529,17 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 print("Error! Invalid selection")
                 sys.exit(0)
 
-    # ------------ create the desired tables ------------
+# ------------ create the desired tables/charts ------------
+
+        if int(s) <= 3:
+            ts = init_sf(spad)      # in alma_skyfield (almanac-based)
+        elif int(s) in set([4, 5]):
+            ts = ld_init_sf(spad)   # in ld_skyfield ('Lunar Distance'-based)
+        papersize = config.pgsz
 
         if s == '1' and entireYr:        # Nautical Almanac (for a year/years)
+            check_exists(spdf + "A4chart0-180_P.pdf")
+            check_exists(spdf + "A4chart180-360_P.pdf")
             print("Take a break - this computer needs some time for cosmic meditation.")
     ##        config.initLOG()		# initialize log file
             for yearint in range(int(yearfr),int(yearto)+1):
@@ -450,12 +554,14 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 print(msg)
     ##            config.writeLOG(msg)
                 first_day = datetime.date(yearint, 1, 1)
-                ff = "NAtrad_" if config.tbls != 'm' else "NAmod_"
-                fn = "{}{}".format(ff,year+DecFmt)
+                ff = "NAtrad" if config.tbls != 'm' else "NAmod"
+                fn = toUnix("{}({})_{}".format(ff,papersize,year+DecFmt))
                 deletePDF(f_prefix + fn)
+                # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                 outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
                 outfile.write(almanac(first_day,0,ts))
                 outfile.close()
+                # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                 timer_end(start, 1)
                 search_stats()
                 if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
@@ -465,6 +571,8 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
     ##        config.closeLOG()     # close log after the for-loop
 
         elif s == '1' and entireMth:        # Nautical Almanac (for a month)
+            check_exists(spdf + "A4chart0-180_P.pdf")
+            check_exists(spdf + "A4chart180-360_P.pdf")
     ##        config.initLOG()		# initialize log file
             if config.MULTIpr: checkCoreCount()
             start = timer_start()
@@ -475,12 +583,14 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             msg = "\nCreating the nautical almanac for {}".format(first_day.strftime("%B %Y"))
             print(msg)
     ##            config.writeLOG(msg)
-            ff = "NAtrad_" if config.tbls != 'm' else "NAmod_"
-            fn = "{}{}".format(ff,syr + '-' + smth + DecFmt)
+            ff = "NAtrad" if config.tbls != 'm' else "NAmod"
+            fn = toUnix("{}({})_{}".format(ff,papersize,syr + '-' + smth + DecFmt))
             deletePDF(f_prefix + fn)
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
             outfile.write(almanac(first_day,-1,ts))
             outfile.close()
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             timer_end(start, 1)
             search_stats()
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
@@ -490,6 +600,8 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
     ##        config.closeLOG()     # close log after the for-loop
 
         elif s == '1' and not entireYr and not entireMth:       # Nautical Almanac (for a few days)
+            check_exists(spdf + "A4chart0-180_P.pdf")
+            check_exists(spdf + "A4chart180-360_P.pdf")
     ##        config.initLOG()		# initialize log file
             if config.MULTIpr: checkCoreCount()
             start = timer_start()
@@ -501,16 +613,18 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             msg = "\nCreating the nautical almanac {} {}".format(txt,first_day.strftime("%d %B %Y"))
             print(msg)
     ##            config.writeLOG(msg)
-            ff = "NAtrad_" if config.tbls != 'm' else "NAmod_"
+            ff = "NAtrad" if config.tbls != 'm' else "NAmod"
             dto = ""
             if daystoprocess > 1:   # filename as 'from date'-'to date'
                 lastdate = d + datetime.timedelta(days=daystoprocess-1)
                 dto = lastdate.strftime("-%Y%m%d")
-            fn = "{}".format(ff+symd+dto+DecFmt)
+            fn = toUnix("{}({})_{}".format(ff,papersize,symd+dto+DecFmt))
             deletePDF(f_prefix + fn)
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
             outfile.write(almanac(first_day,daystoprocess,ts))
             outfile.close()
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             timer_end(start, 1)
             search_stats()
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
@@ -520,56 +634,67 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
     ##        config.closeLOG()     # close log after the for-loop
 
         elif s == '2' and entireYr:     # Sun Tables (for a year/years)
+            check_exists(spdf + "Ra.jpg")
             for yearint in range(int(yearfr),int(yearto)+1):
                 year = "{:4d}".format(yearint)  # year = "%4d" %yearint
                 msg = "\nCreating the sun tables for the year {}".format(year)
                 print(msg)
                 first_day = datetime.date(yearint, 1, 1)
-                ff = "STtrad_" if config.tbls != 'm' else "STmod_"
-                fn = "{}{}".format(ff,year+DecFmt)
+                ff = "STtrad" if config.tbls != 'm' else "STmod"
+                fn = toUnix("{}({})_{}".format(ff,papersize,year+DecFmt))
                 deletePDF(f_prefix + fn)
+                # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                 outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
                 outfile.write(sunalmanac(first_day,0))
                 outfile.close()
+                # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                 if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
                 makePDF(listarg, fn)
                 tidy_up(fn, keeplog, keeptex)
                 if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 
         elif s == '2' and entireMth:     # Sun Tables (for a month)
+            check_exists(spdf + "Ra.jpg")
             msg = "\nCreating the sun tables for {}".format(first_day.strftime("%B %Y"))
             print(msg)
-            ff = "STtrad_" if config.tbls != 'm' else "STmod_"
-            fn = "{}{}".format(ff,syr + '-' + smth + DecFmt)
+            ff = "STtrad" if config.tbls != 'm' else "STmod"
+            fn = toUnix("{}({})_{}".format(ff,papersize,syr + '-' + smth + DecFmt))
             deletePDF(f_prefix + fn)
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
             outfile.write(sunalmanac(first_day,-1))
             outfile.close()
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
             makePDF(listarg, fn)
             tidy_up(fn, keeplog, keeptex)
             if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 
         elif s == '2' and not entireYr and not entireMth:   # Sun Tables (for a few days)
+            check_exists(spdf + "Ra.jpg")
             txt = "from" if daystoprocess > 1 else "for"
             msg = "\nCreating the sun tables {} {}".format(txt,first_day.strftime("%d %B %Y"))
             print(msg)
-            ff = "STtrad_" if config.tbls != 'm' else "STmod_"
+            ff = "STtrad" if config.tbls != 'm' else "STmod"
             dto = ""
             if daystoprocess > 1:   # filename as 'from date'-'to date'
                 lastdate = d + datetime.timedelta(days=daystoprocess-1)
                 dto = lastdate.strftime("-%Y%m%d")
-            fn = "{}".format(ff+symd+dto+DecFmt)
+            fn = toUnix("{}({})_{}".format(ff,papersize,symd+dto+DecFmt))
             deletePDF(f_prefix + fn)
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
             outfile.write(sunalmanac(first_day,daystoprocess))
             outfile.close()
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
             makePDF(listarg, fn)
             tidy_up(fn, keeplog, keeptex)
             if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 
         elif s == '3' and entireYr:      # Event Time tables  (for a year/years)
+            check_exists(spdf + "A4chart0-180_P.pdf")
+            check_exists(spdf + "A4chart180-360_P.pdf")
             print("Take a break - this computer needs some time for cosmic meditation.")
             for yearint in range(int(yearfr),int(yearto)+1):
                 if config.MULTIpr: checkCoreCount()
@@ -578,11 +703,13 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 msg = "\nCreating the event time tables for the year {}".format(year)
                 print(msg)
                 first_day = datetime.date(yearint, 1, 1)
-                fn = "Event-Times_{}".format(year)
+                fn = toUnix("Event-Times({})_{}".format(papersize,year))
                 deletePDF(f_prefix + fn)
+                # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                 outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
-                outfile.write(maketables(first_day,0,ts))
+                outfile.write(makeEVtables(first_day,0,ts))
                 outfile.close()
+                # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                 timer_end(start, 1)
                 if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
                 makePDF(listarg, fn)
@@ -590,15 +717,19 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 
         elif s == '3' and entireMth:      # Event Time tables  (for a month)
+            check_exists(spdf + "A4chart0-180_P.pdf")
+            check_exists(spdf + "A4chart180-360_P.pdf")
             if config.MULTIpr: checkCoreCount()
             start = timer_start()
             msg = "\nCreating the event time tables for {}".format(first_day.strftime("%B %Y"))
             print(msg)
-            fn = "Event-Times_{}".format(syr + '-' + smth)
+            fn = toUnix("Event-Times({})_{}".format(papersize,syr + '-' + smth))
             deletePDF(f_prefix + fn)
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
-            outfile.write(maketables(first_day,-1,ts))
+            outfile.write(makeEVtables(first_day,-1,ts))
             outfile.close()
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             timer_end(start, 1)
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
             makePDF(listarg, fn)
@@ -606,19 +737,23 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 
         elif s == '3' and not entireYr and not entireMth:   # Event Time tables (for a few days)
+            check_exists(spdf + "A4chart0-180_P.pdf")
+            check_exists(spdf + "A4chart180-360_P.pdf")
             if config.MULTIpr: checkCoreCount()
             start = timer_start()
             txt = "from" if daystoprocess > 1 else "for"
             msg = "\nCreating the event time tables {} {}".format(txt,first_day.strftime("%d %B %Y"))
             print(msg)
-            fn = "Event-Times_{}".format(symd)
+            fn = toUnix("Event-Times({})_{}".format(papersize,symd))
             if daystoprocess > 1:   # filename as 'from date'-'to date'
                 lastdate = d + datetime.timedelta(days=daystoprocess-1)
                 fn += lastdate.strftime("-%Y%m%d")
             deletePDF(f_prefix + fn)
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
-            outfile.write(maketables(first_day,daystoprocess,ts))
+            outfile.write(makeEVtables(first_day,daystoprocess,ts))
             outfile.close()
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             timer_end(start, 1)
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
             makePDF(listarg, fn)
@@ -626,7 +761,8 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             if config.dockerized: os.chdir(docker_main)     # reset working folder to code folder
 
         elif s == '4':  # Lunar Distance tables
-            papersize = config.pgsz
+            check_exists(spdf + "A4chart0-180_P.pdf")
+            check_exists(spdf + "A4chart180-360_P.pdf")
             if entireYr: # Lunar Distance tables (for a year/years)
                 for yearint in range(int(yearfr),int(yearto)+1):
                     start = time.time()
@@ -634,105 +770,89 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                     msg = "\nCreating the lunar distance tables for the year {}".format(year)
                     print(msg)
                     daystoprocess = (datetime.date(yearint+1, 1, 1) - datetime.date(yearint, 1, 1)).days
-                    filename = "{}-lunar-{}".format(papersize,year)
-                    outfile = open(filename + ".tex", mode="w", encoding="utf8")
+                    fn = toUnix("LDtable({})_{}".format(papersize,year))
                     first_day = datetime.date(yearint, 1, 1)
-                    outfile.write(makeLDtables(first_day,strat,daystoprocess,entireMth,entireYr))
+                    # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+                    outfile = open(fn + ".tex", mode="w", encoding="utf8")
+                    outfile.write(makeLDtables(first_day,strat,daystoprocess,entireMth,entireYr,spad))
                     outfile.close()
+                    # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+                    if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
                     stop = time.time()
                     msg2 = "execution time = {:0.2f} seconds".format(stop-start)
                     print(msg2)
-                    makePDF(listarg, filename)
-                    tidy_up(filename, keeplog, keeptex)
+                    makePDF(listarg, fn)
+                    tidy_up(fn, keeplog, keeptex)
             else:
                 start = time.time()
                 if entireMth:
-                    filename = "{}-lunar-{}".format(papersize,syr + '-' + smth)
+                    fn = toUnix("LDtable({})_{}".format(papersize,syr + '-' + smth))
                     msg = "\nCreating the lunar distance tables for {}".format(syr + '-' + smth)
                 else:
-                    filename = "{}-lunar-{}".format(papersize,symd)
+                    fn = toUnix("LDtable({})_{}".format(papersize,symd))
                     if daystoprocess > 1:   # filename as 'from date'-'to date'
                         lastdate = first_day + datetime.timedelta(days=daystoprocess-1)
                         lymd = lastdate.strftime("-%Y%m%d")
-                        filename += lymd
+                        fn += lymd
                         msg = "\nCreating the lunar distance tables from {}".format(symd)
-                    else: msg = "\nCreating the lunar distance tables for {}".format(symd)
+                    else: msg = "\nCreating the lunar distance table for {}".format(symd)
                 print(msg)
-                deletePDF(f_prefix + filename)
-                outfile = open(filename + ".tex", mode="w", encoding="utf8")
-                outfile.write(makeLDtables(first_day,strat,daystoprocess,entireMth,entireYr))
+                deletePDF(f_prefix + fn)
+                # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+                outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
+                outfile.write(makeLDtables(first_day,strat,daystoprocess,entireMth,entireYr,spad))
                 outfile.close()
+                # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+                if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
                 stop = time.time()
-                msg2 = "execution time = {:0.2f} seconds\n".format(stop-start)
+                msg2 = "execution time = {:0.2f} seconds".format(stop-start)
                 print(msg2)
-                makePDF(listarg, filename)
-                tidy_up(filename, keeplog, keeptex)
+                makePDF(listarg, fn)
+                tidy_up(fn, keeplog, keeptex)
 
-        elif s == '5':      # Nautical almanac   -  6 days from today
-    ##        config.initLOG()		# initialize log file
-            if config.MULTIpr: checkCoreCount()
-            start = timer_start()
-            msg = "\nCreating nautical almanac tables - from {}".format(sdmy)
-            print(msg)
-            ff = "NAtrad_" if config.tbls != 'm' else "NAmod_"
-            fn = "{}".format(ff+symd)
-            lastdate = d + datetime.timedelta(days=5)
-            fn += lastdate.strftime("-%Y%m%d") + DecFmt
+        elif s == '5':  # Lunar Distance charts
+            if entireMth:
+                fn = toUnix("LDchart({})_{}".format(papersize,syr + '-' + smth))
+            else:
+                fn = toUnix("LDchart({})_{}".format(papersize,symd))
+                if daystoprocess > 1:   # filename as 'from date'-'to date'
+                    lastdate = first_day + datetime.timedelta(days=daystoprocess-1)
+                    lymd = lastdate.strftime("-%Y%m%d")
+                    fn += lymd
             deletePDF(f_prefix + fn)
+
+            start = time.time()
+            if entireYr: msg = "\nCreating the lunar distance charts for the year {}".format(syr)
+            elif entireMth: msg = "\nCreating the lunar distance charts for {}".format(syr + '-' + smth)
+            elif daystoprocess > 1: msg = "\nCreating the lunar distance charts from {}".format(symd)
+            else: msg = "\nCreating the lunar distance chart for {}".format(symd)
+            print(msg)
+            # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
-            outfile.write(almanac(first_day,6,ts))
+            makeLDcharts(first_day,strat,daystoprocess,outfile,spad,ts,onlystars,quietmode)
             outfile.close()
-            timer_end(start, 1)
-            search_stats()
-    ##        config.writeLOG('\n\n' + msg1 + '\n' + msg2 + '\n' + msg3)
-    ##        config.closeLOG()
+            # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
-            makePDF(listarg, fn)
+            stop = time.time()
+            msg2 = "\nexecution time = {:0.2f} seconds".format(stop-start)
+            print(msg2)
+            msg = " creating {}".format(fn + ".pdf")
+            makePDF(listarg, fn, msg)
             tidy_up(fn, keeplog, keeptex)
 
-        elif s == '6':      # Sun tables only    - 30 days from today
-            msg = "\nCreating the sun tables - from {}".format(sdmy)
-            print(msg)
-            ff = "STtrad_" if config.tbls != 'm' else "STmod_"
-            fn = "{}".format(ff+symd)
-            lastdate = d + datetime.timedelta(days=29)
-            fn += lastdate.strftime("-%Y%m%d") + DecFmt
-            deletePDF(f_prefix + fn)
-            outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
-            outfile.write(sunalmanac(first_day,30))
-            outfile.close()
-            if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
-            makePDF(listarg, fn)
-            tidy_up(fn, keeplog, keeptex)
-
-        elif s == '7':      # Event Time tables  -  6 days from today
-            if config.MULTIpr: checkCoreCount()
-            start = timer_start()
-            msg = "\nCreating event time tables - from {}".format(sdmy)
-            print(msg)
-            fn = "Event-Times_{}".format(symd)
-            lastdate = d + datetime.timedelta(days=5)
-            fn += lastdate.strftime("-%Y%m%d")
-            deletePDF(f_prefix + fn)
-            outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
-            outfile.write(maketables(first_day,6,ts))
-            outfile.close()
-            timer_end(start, 1)
-            if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
-            makePDF(listarg, fn)
-            tidy_up(fn, keeplog, keeptex)
-
-        elif s == '8':
+        elif s == '6':
             msg = "\nCreating the Increments and Corrections tables"
             print(msg)
-            fn = "Inc"
+            fn = toUnix("Inc(A4)")
             deletePDF(f_prefix + fn)
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
             outfile.write(makelatex())
             outfile.close()
+            # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
             makePDF(listarg, fn)
             tidy_up(fn, keeplog, keeptex)
 
     else:
-        print("Error! Choose 1, 2, 3, 4, 5, 6, 7 or 8")
+        print("Error! Choose 1, 2, 3, 4, 5 or 6")

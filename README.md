@@ -144,6 +144,20 @@ However the IERS server is currently undergoing maintenance and thus unavailable
 
 BUGFIX: Event Time tables no longer fail on 24.08.2063 (Lower Transit).
 
+**UPDATE: May 2022**
+
+Lunar Distance charts have been added as a new option to complement the Lunar Distance tables.
+
+SFalmanac in DockerHub has been updated to match this May 2022 issue:
+https://hub.docker.com/r/aendie/sfalmanac
+
+The PDF filenames have been revised (again), where 'A4' (or 'Letter') is the selected papersize:
+
+* NAmod(A4)_\<starting date or month or year\>.pdf: for Nautical Almanacs in modern style
+* STmod(A4)_\<starting date or month or year\>.pdf: for Sun Tables in modern style
+* NAtrad(A4)_\<starting date or month or year\>.pdf: for Nautical Almanacs in traditional style
+* STtrad(A4)_\<starting date or month or year\>.pdf: for Sun Tables in traditional style
+
 ## Requirements
 
 &emsp;Most of the computation is done by the free Skyfield library.  
