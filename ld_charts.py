@@ -1182,8 +1182,8 @@ def beginPDF():
 \definecolor{Dark chestnut}{rgb}{0.6, 0.41, 0.38}
 \definecolor{Green (pigment)}{rgb}{0.0, 0.65, 0.31}
 %%\definecolor{Light slate gray}{rgb}{0.47, 0.53, 0.6}
-%%\definecolor{Gold (metallic)}{rgb}{0.83, 0.69, 0.22}
-\definecolor{Dark Gold}{rgb}{0.71, 0.59, 0.19}
+\definecolor{Gold (metallic)}{rgb}{0.83, 0.69, 0.22}
+%%\definecolor{Dark Gold}{rgb}{0.71, 0.59, 0.19}
 \definecolor{Celestial blue}{rgb}{0.29, 0.59, 0.82}
 \definecolor{Dark turquoise}{rgb}{0.0, 0.79, 0.79}
 \definecolor{Rose pink}{rgb}{1.0, 0.4, 0.8}
@@ -2283,7 +2283,7 @@ ns_fs,-0.9*sf,2.67*sf)
     else: texMoon = ""
 
     #   colours for the 8 max. Lunar Distance Moon-to-object connecting lines
-    LDcolour = ['Dark chestnut', 'Celestial blue', 'Rose pink', 'Green (pigment)', 'Orange (color wheel)', 'Lavender indigo', 'Dark Gold', 'Dark turquoise']
+    LDcolour = ['Dark chestnut', 'Celestial blue', 'Rose pink', 'Green (pigment)', 'Orange (color wheel)', 'Lavender indigo', 'Gold (metallic)', 'Dark turquoise']
 
     #   maintain object colour from page to page. It's confusing if the same
     #       object has a different colour on the next day (= next page)
