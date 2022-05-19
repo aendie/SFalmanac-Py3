@@ -492,6 +492,26 @@ def find_transit(d, ghaList, modeLT):   # used in moontab
 
 
 #-------------------------------------------------------------
+#   Sun and Moon calculations  (Lunar Distance tables only)
+#-------------------------------------------------------------
+
+def sunSD(d):
+    # compute semi-diameter of sun at 0h and 23h
+    sdsm = [0.0, 0.0]
+    i = 0
+    for hh in [0, 23]:
+        t00 = ts.ut1(d.year, d.month, d.day, hh, 0, 0)
+        position = earth.at(t00).observe(sun)
+        distance = position.apparent().radec(epoch='date')[2]
+        dist_km = distance.km
+        # volumetric mean radius of sun = 695700 km
+        sds = math.degrees(math.atan(695700.0 / dist_km))
+        sdsm[i] = "{:0.1f}".format(sds * 60)   # convert to minutes of arc
+        i += 1
+
+    return sdsm
+
+#-------------------------------------------------------------
 #   Sun and Moon calculations  (Lunar Distance charts only)
 #-------------------------------------------------------------
 

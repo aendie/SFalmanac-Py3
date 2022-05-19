@@ -28,7 +28,7 @@ import sys			# required for .stdout.write()
 
 ###### Local application imports ######
 import config
-from ld_skyfield import getDUT1, moon_GHA, moon_SD, moon_VD, ld_planets, ld_stars, find_transit
+from ld_skyfield import getDUT1, moon_GHA, moon_SD, moon_VD, ld_planets, ld_stars, find_transit, sunSD
 
 UpperLists = [[], [], []]    # moon GHA per hour for 3 days
 
@@ -260,6 +260,31 @@ def moontab(date, strat, dop):
         
 # =================================================================
 
+        # is the Sun a selected celestial object?
+        sunSDrqrd = False
+        iC = 0
+        for objX in obj:
+            if objX[1:] == "Sun":
+                sunSDrqrd = True
+                break
+            iC += 1
+
+        if sunSDrqrd:
+            sdsm = sunSD(date)  # get sun's SD at 0h and 23h
+            ldx00 = ld[iC][0]
+            ldx23 = ld[iC][23]
+            if ldx00.find("circ") == -1: ldx00 = ''
+            if ldx23.find("circ") == -1: ldx23 = ''
+            sdsval = sdsm[0]
+            if ldx00 == '': sdsval = sdsm[1]
+            if ldx00 != '' and ldx23 != '': # if we have LD at 0h and 23h
+                if sdsm[0] == sdsm[1]:
+                    sdstxt = "Sun SD = " + sdsval + r'''$'$'''
+                else:
+                    sdstxt = r'''Sun SD = {}$'$ at 0h; {}$'$ at 23h'''.format(sdsm[0],sdsm[1])
+            else:
+                sdstxt = "Sun SD = " + sdsval + r'''$'$'''
+
         if config.debug_strategy:
             print("{} columns of data".format(iCols))
 
@@ -335,7 +360,10 @@ def moontab(date, strat, dop):
         tab = tab + r'''\hline
 \rule{{0pt}}{{2.4ex}} & \multicolumn{{5}}{{c|}}{{SD = {}$'$ \quad Mer. pass. {}}}'''.format(sdmm,mp_upper)
         if iCols > 0:
-            tab = tab + r''' & \multicolumn{{{}}}{{c|}}{{}}'''.format(iCols)
+            if sunSDrqrd:
+                tab = tab + r''' & \multicolumn{{{}}}{{c|}}{{{}}}'''.format(iCols,sdstxt)
+            else:
+                tab = tab + r''' & \multicolumn{{{}}}{{c|}}{{}}'''.format(iCols)
         if len(NMhours) == 24:      # add fake column (iCols == 0)
             tab = tab + r''' & \multicolumn{1}{c|}{}'''
         tab = tab + r'''\\

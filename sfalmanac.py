@@ -479,13 +479,13 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
 
                 if daystoprocess == 0:
                     daystoprocess = 1       # default
-                    s = input("""  Enter number of days to process from starting date:
+                    nn = input("""  Enter number of days to process from starting date:
 """)
-                    if len(s) > 0:
-                        if not s.isnumeric():
+                    if len(nn) > 0:
+                        if not nn.isnumeric():
                             print("ERROR: Not a number")
                             sys.exit()
-                        daystoprocess = int(s)
+                        daystoprocess = int(nn)
                         if daystoprocess > 50:
                             print("ERROR: 'Days to process' not <= 50")
                             sys.exit()

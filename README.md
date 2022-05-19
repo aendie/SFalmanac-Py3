@@ -158,6 +158,8 @@ The PDF filenames have been revised (again), where 'A4' (or 'Letter') is the sel
 * NAtrad(A4)_\<starting date or month or year\>.pdf: for Nautical Almanacs in traditional style
 * STtrad(A4)_\<starting date or month or year\>.pdf: for Sun Tables in traditional style
 
+PATCH1: Sun SD added to Lunar Distance tables when appropriate
+
 ## Requirements
 
 &emsp;Most of the computation is done by the free Skyfield library.  
