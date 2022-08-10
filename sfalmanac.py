@@ -34,6 +34,7 @@ config.MACOSpf = True if sys.platform == 'darwin' else False
 config.CPUcores = cpu_count()
 # NOTE: Multiprocessing on Windows using 'spawn' requires all variables modified
 #       and stored in config.py to be re-calculated for every spawned process!
+# NOTE: multiprocessing is supported in modules: nautical, eventtables
 from alma_skyfield import init_sf
 from ld_skyfield import ld_init_sf
 from nautical import almanac            # multiprocessing supported
@@ -65,7 +66,7 @@ def deletePDF(filename):
 
 def makePDF(pdfcmd, fn, msg = ""):
     command = 'pdflatex {}'.format(pdfcmd + fn + ".tex")
-    print()     # blank line before "This is pdfTex, Version 3.14159265...
+    print()     # blank line before "This is pdfTex, Version 3.141592653...
     if pdfcmd == "":
         os.system(command)
         print("finished" + msg)
@@ -96,7 +97,7 @@ def tidy_up(fn, kl, kt):
 def check_mth(mm):
     if not 1 <= int(mm) <= 12:
         print("ERROR: Enter month between 01 and 12")
-        sys.exit()
+        sys.exit(0)
 
 def check_exists(fn):
     # check a required file exist to avoid a more obscure error in pdfTeX if "-v" not used...
@@ -112,7 +113,7 @@ def check_date(year, month, day):
         day_count_for_month[2] = 29
     if not (1 <= mm <= 12 and 1 <= int(day) <= day_count_for_month[mm]):
         print("ERROR: Enter a valid date")
-        sys.exit()
+        sys.exit(0)
 
 def check_years(yearfr, yearto):
     global yrmin, yrmax
@@ -353,7 +354,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                     if ss.lower() != 'x': sErr = True
                 if sErr:
                     print("ERROR: Incorrect data or format")
-                    sys.exit()
+                    sys.exit(0)
 
             else:
                 if len(ss) not in [2,3,4,8,9]: sErr = True
@@ -367,7 +368,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
 
                 if sErr:
                     print("ERROR: Incorrect data or format")
-                    sys.exit()
+                    sys.exit(0)
 
                 if len(ss) == 2:
                     dd = "01"
@@ -416,11 +417,11 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                     if len(nn) > 0:
                         if not nn.isnumeric():
                             print("ERROR: Not a number")
-                            sys.exit()
+                            sys.exit(0)
                         daystoprocess = int(nn)
                         if daystoprocess > 300:
                             print("ERROR: 'Days to process' not <= 300")
-                            sys.exit()
+                            sys.exit(0)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         elif int(s) == 5:   # for Lunar Distance charts only
 #   Due to the lengthy calculations LD charts for a whole year is not supported.
@@ -450,7 +451,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 elif not ss.isnumeric(): sErr = True
                 if sErr:
                     print("ERROR: Enter numeric digits in the correct format")
-                    sys.exit()
+                    sys.exit(0)
                 if len(ss) == 2:
                     dd = "01"
                     mm = ss[0:2]
@@ -484,11 +485,11 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                     if len(nn) > 0:
                         if not nn.isnumeric():
                             print("ERROR: Not a number")
-                            sys.exit()
+                            sys.exit(0)
                         daystoprocess = int(nn)
                         if daystoprocess > 50:
                             print("ERROR: 'Days to process' not <= 50")
-                            sys.exit()
+                            sys.exit(0)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if s in set(['1', '2']):
             tsin = input("""  What table style is required?:\n

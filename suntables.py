@@ -278,15 +278,13 @@ def page(date, dpp=15):
     else:
         str2 = r'''\textbf{{{} UT}}'''.format(date.strftime("%Y %B %d"))
 
-    # creates a page(15 days) of the Sun almanac
+    # creates a page (15 days) of the Sun almanac
     page = r'''
 % ------------------ N E W   P A G E ------------------
 \newpage
 \sffamily
-\noindent
-\begin{{flushleft}}     % required so that \par works
-{{\footnotesize {}}}\hfill{}
-\end{{flushleft}}\par
+\lhead{{\noindent\textsf{{\footnotesize{{{}}}}}}}
+\rhead{{\textsf{{\textbf{{{}}}}}}}
 \begin{{scriptsize}}
 '''.format(timeDUT1, str2)
 
@@ -364,40 +362,46 @@ def sunalmanac(first_day, dtp):
     day = first_day.day
 
     # page size specific parameters
+    # NOTE: 'bm' (bottom margin) is an unrealistic value used only to determine the vertical size of 'body' (textheight), which must be large enough to include all the tables. 'tm' (top margin) and 'hs' (headsep) determine the top of body. Finally use 'fs' (footskip) to position the footer.
     if config.pgsz == "A4":
-        # pay attention to the limited page width
+        # A4 ... pay attention to the limited page width
         paper = "a4paper"
-        tm = "21mm"
+        tm = "34.6mm"       # was "21mm" [v2q]
         bm = "18mm"
-        lm = "12mm"     # 13mm
-        rm = "12mm"     # 13mm
-        if config.tbls == "m" and config.decf != '+':	# USNO format for Declination
-            tm = "8mm"
-            bm = "13mm"
+        hs = "2.3pt"        # headsep  (page 3 onwards) [v2q]
+        fs = "36pt"         # footskip (page 3 onwards) [v2q]
+        lm = "12mm"         # 13mm
+        rm = "12mm"         # 13mm
+        if config.tbls == "m":  # USNO format for Declination
+            tm = "21.6mm"   # was "8mm" [v2q]
+            bm = "9mm"      # was "13mm" [v2q]
+            hs = "3.4pt"    # headsep  (page 3 onwards) [v2q]
+            fs = "24pt"     # footskip (page 3 onwards) [v2q]
             lm = "11mm"
             rm = "10mm"
-        if config.tbls == "m" and config.decf == '+':	# Positive/Negative Declinations
-            tm = "8mm"
-            bm = "13mm"
-            lm = "12mm"
-            rm = "12mm"
+            if config.decf == '+':	# Positive/Negative Declinations
+                lm = "12mm"     # 14mm
+                rm = "12mm"     # 14mm
     else:
-        # pay attention to the limited page height
+        # LETTER ... pay attention to the limited page height
         paper = "letterpaper"
-        tm = "12.2mm"
-        bm = "13mm"
-        lm = "15mm"     # 16mm
-        rm = "15mm"     # 16mm
-        if config.tbls == "m" and config.decf != '+':	# USNO format for Declination
-            tm = "5mm"
-            bm = "8mm"
+        tm = "25.7mm"       # was "12.2mm" [v2q]
+        bm = "9.5mm"        # was "13mm"
+        hs = "2.6pt"        # headsep  (page 3 onwards) [v2q]
+        fs = "28pt"         # footskip (page 3 onwards) [v2q]
+        lm = "15mm"         # 16mm
+        rm = "15mm"         # 16mm
+        if config.tbls == "m":	# USNO format for Declination
+            tm = "18mm"     # was "5mm" [v2q]
+            bm = "2mm"      # was "8mm" [v2q]
+            hs = "1.6pt"    # headsep    (page 3 onwards) [v2q]
+            fs = "21pt"     # footskip   (page 3 onwards) [v2q]
             lm = "14mm"
             rm = "13mm"
-        if config.tbls == "m" and config.decf == '+':	# Positive/Negative Declinations
-            tm = "5mm"
-            bm = "8mm"
-            lm = "15mm"
-            rm = "15mm"
+            if config.decf == '+':	# Positive/Negative Declinations
+                lm = "15mm"
+                rm = "15mm"
+
 
     # default is 'oneside'...
     alm = r'''\documentclass[10pt, {}]{{report}}'''.format(paper)
@@ -416,11 +420,17 @@ def sunalmanac(first_day, dtp):
 
     # to troubleshoot add "showframe, verbose," below:
     alm = alm + r'''
-\usepackage[nomarginpar, top={}, bottom={}, left={}, right={}]{{geometry}}'''.format(tm,bm,lm,rm)
+\usepackage[nomarginpar, top={}, bottom={}, left={}, right={}]{{geometry}}
+\setlength{{\headsep}}{{{}}} % [v2q]'''.format(tm,bm,lm,rm,hs)
 
     # Note: \DeclareUnicodeCharacter is not compatible with some versions of pdflatex
     alm = alm + r'''
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\usepackage{fancyhdr}   % [v2q]
+\pagestyle{fancy}       % [v2q]
+\renewcommand{\headrulewidth}{0pt}  % [v2q]
+%\pdfvorigin=1in % [v2q]
+%\pdfhorigin=1in % [v2q]
 \setlength{\footskip}{15pt}
 \usepackage[pdftex]{graphicx}
 %\showboxbreadth=50  % use for logging
@@ -471,7 +481,9 @@ def sunalmanac(first_day, dtp):
     \emph{Author:}\\
     Andrew \textsc{Bauer}\\[6Pt]
     \emph{Original concept from:}\\
-    Enno \textsc{Rodegerdts}
+    Enno \textsc{Rodegerdts}\\[6Pt]
+    \emph{Python Package Index:}\\
+    https://pypi.org/project/sfalmanac/
     \end{center}'''
 
     alm = alm + r'''
@@ -486,7 +498,9 @@ def sunalmanac(first_day, dtp):
     Besides, this publication only contains sun tables: an official version of the Nautical Almanac is indispensable.
     \end{description}
 \end{titlepage}
-'''
+\lfoot{\textsf{\footnotesize{https://thenauticalalmanac.com/}}}
+\cfoot{\centerline{Page \thepage}}
+\rfoot{\textsf{\footnotesize{https://pypi.org/project/sfalmanac/}}}'''
 
     alm = alm + r'''
     \setcounter{page}{2}    % otherwise it's 1
@@ -519,6 +533,10 @@ def sunalmanac(first_day, dtp):
     \item if the $LHA$ is less than $180^\circ$,\quad$Z_n = 360^\circ - A$
     \end{itemize}
 \restoregeometry    % so it does not affect the rest of the pages'''
+
+    # footskip = distance of footer baseline below body [v2q]
+    alm = alm + r'''
+\setlength{{\footskip}}{{{}}}'''.format(fs)
 
     alm = alm + pages(first_day,dtp)
     alm = alm + '''

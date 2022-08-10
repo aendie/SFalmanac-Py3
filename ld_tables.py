@@ -403,10 +403,8 @@ def page(date, strat, dop):
 % ------------------ N E W   P A G E ------------------
 \newpage
 \sffamily
-\noindent
-\begin{{flushleft}}     % required so that \par works
-{{\footnotesize {}}}\hfill{}
-\end{{flushleft}}\par
+\lhead{{\noindent\textsf{{\footnotesize{{{}}}}}}}
+\rhead{{\textsf{{\textbf{{{}}}}}}}
 \begin{{scriptsize}}
 '''.format(timeDUT1, str2)
 
@@ -443,30 +441,45 @@ def makeLDtables(first_day, strat, daysnum, entireMth, entireYr, spad):
     day = first_day.day
 
     # page size specific parameters
+    # NOTE: 'bm' (bottom margin) is an unrealistic value used only to determine the vertical size of 'body' (textheight), which must be large enough to include all the tables. 'tm' (top margin) and 'hs' (headsep) determine the top of body. Finally use 'fs' (footskip) to position the footer.
     if config.pgsz == "A4":
-        # pay attention to the limited page width
+        # A4 ... pay attention to the limited page width
         paper = "a4paper"
+        # title page...
         vsep1 = "1.5cm"
         vsep2 = "1.0cm"
-        tm1 = "21mm"    # title page...
+        tm1 = "21mm"
         bm1 = "15mm"
         lm1 = "10mm"
         rm1 = "10mm"
-        tm = "21mm"     # data pages...
-        bm = "18mm"
+        # description text...
+        tm2 = "21mm"
+        bm2 = "18mm"
+        # data pages...
+        tm = "34.5mm"       # was "21mm" [v2q]
+        bm = "12mm"         # was "18mm" [v2q]
+        hs = "5.1pt"        # headsep  (page 3 onwards) [v2q]
+        fs = "24pt"         # footskip (page 3 onwards) [v2q]
         lm = "16mm"
         rm = "12mm"
     else:
-        # pay attention to the limited page height
+        # LETTER ... pay attention to the limited page height
         paper = "letterpaper"
+        # title page...
         vsep1 = "0.8cm"
         vsep2 = "0.7cm"
-        tm1 = "12mm"    # title page...
+        tm1 = "12mm"
         bm1 = "15mm"
         lm1 = "12mm"
         rm1 = "12mm"
-        tm = "12mm"   # data pages...
-        bm = "12mm"
+        # description text...
+        tm2 = "12mm"
+        bm2 = "13mm"
+        # data pages...
+        tm = "25.6mm"       # was "12mm" [v2q]
+        bm = "5mm"          # was "12mm" [v2q]
+        hs = "2.6pt"        # headsep  (page 3 onwards) [v2q]
+        fs = "21pt"         # footskip (page 3 onwards) [v2q]
         lm = "16mm"
         rm = "14mm"
 
@@ -481,7 +494,8 @@ def makeLDtables(first_day, strat, daysnum, entireMth, entireYr, spad):
 
     # to troubleshoot add "showframe, verbose," below:
     alm = alm + r'''
-\usepackage[nomarginpar, top={}, bottom={}, left={}, right={}]{{geometry}}'''.format(tm,bm,lm,rm)
+\usepackage[nomarginpar, top={}, bottom={}, left={}, right={}]{{geometry}}
+\setlength{{\headsep}}{{{}}} % [v2q]'''.format(tm,bm,lm,rm,hs)
 
     # Note: \DeclareUnicodeCharacter is not compatible with some versions of pdflatex
     alm = alm + r'''
@@ -489,7 +503,10 @@ def makeLDtables(first_day, strat, daysnum, entireMth, entireYr, spad):
 \definecolor{khaki}{rgb}{0.76, 0.69, 0.57}
 \usepackage{multirow}
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
-\setlength{\footskip}{15pt}
+\usepackage{fancyhdr}   % [v2q]
+\pagestyle{fancy}       % [v2q]
+\renewcommand{\headrulewidth}{0pt}  % [v2q]
+\setlength{\footskip}{20pt}
 \usepackage[pdftex]{graphicx}	% for \includegraphics
 \usepackage{tikz}				% for \draw  (load after 'graphicx')
 %\showboxbreadth=50  % use for logging
@@ -551,11 +568,18 @@ def makeLDtables(first_day, strat, daysnum, entireMth, entireYr, spad):
     \begin{description}[leftmargin=5.5em,style=nextline]\footnotesize
     \item[Disclaimer:] These are computer generated tables - use them at your own risk. They replicate Lunar Distance algorithms with no guarantee of accuracy. They are intended to encourage the use of sextants, be it as a hobby or as a backup when electronics fail. The author claims no liability for any consequences arising from use of these tables and accompanying charts.
     \end{description}
-\end{titlepage}
-\restoregeometry    % so it does not affect the rest of the pages'''
+\end{titlepage}'''
+
     alm = alm + r'''
-    \setcounter{page}{2}    % otherwise it's 1
-    %\vspace*{1cm}
+% for the description text only...
+\newgeometry{{nomarginpar, top={}, bottom={}, left={}, right={}}}'''.format(tm2,bm2,lm,rm)
+
+    alm = alm + r'''
+\lfoot{\textsf{\footnotesize{https://thenauticalalmanac.com/}}}
+\cfoot{\centerline{Page \thepage}}
+\rfoot{\textsf{\footnotesize{https://pypi.org/project/sfalmanac/}}}
+\setcounter{page}{2}    % otherwise it's 1
+    %\vspace*{5mm}
     \noindent
     \textbf{Lunar Distance}\\[12pt]
     \noindent
@@ -597,7 +621,12 @@ def makeLDtables(first_day, strat, daysnum, entireMth, entireYr, spad):
     ``The rate of change of LD becomes zero when LD passes through a minimum or maximum, making an observation useless.''\footnote{Henning Umland, Chapter 7 - Finding Time and Longitude by Lunar Distances}
     \item the rate of change of the hourly LD delta does not exceed 0.016$^\circ$ (= 0.96$'$). This empirical figure removes LD values where linear interpolation (between hours) becomes unreliable.
     \end{itemize}
-    Suggested further reading: ``Stark Tables: For Clearing the Lunar Distance and Finding Universal Time by Sextant Observation'' by Bruce Stark, ISBN 978-0-914025-21-4'''
+    Suggested further reading: ``Stark Tables: For Clearing the Lunar Distance and Finding Universal Time by Sextant Observation'' by Bruce Stark, ISBN 978-0-914025-21-4
+\restoregeometry    % so it does not affect the rest of the pages'''
+
+    # footskip = distance of footer baseline below body [v2q]
+    alm = alm + r'''
+\setlength{{\footskip}}{{{}}}'''.format(fs)
 
     alm = alm + pages(first_day,strat,daysnum)
     alm = alm + '''

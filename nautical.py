@@ -44,6 +44,7 @@
 ###### Standard library imports ######
 from datetime import datetime, timedelta
 import sys			# required for .stdout.write()
+import signal       # for init_worker
 from math import cos as cos
 from math import copysign as copysign
 from math import pi as pi
@@ -66,6 +67,7 @@ else:
 
 UpperLists = [[], [], []]    # moon GHA per hour for 3 days
 LowerLists = [[], [], []]    # moon colong GHA per hour for 3 days
+msg0 = "\nKeyboardInterrupt detected - multiprocessing aborted."
 
 #------------------------
 #   internal functions
@@ -287,7 +289,14 @@ def planetstab(date, ts):
             # multiprocess 'SHA + transit times' simultaneously
             objlist = ['aries', 'venus', 'mars', 'jupiter', 'saturn']
             partial_func2 = partial(mp_planetGHA_worker, date, ts)
-            listofGHA = pool.map(partial_func2, objlist, 1)     # RECOMMENDED: chunksize = 1
+
+            try:
+                # RECOMMENDED: chunksize = 1
+                listofGHA = pool.map(partial_func2, objlist, 1)
+            except KeyboardInterrupt:
+                print(msg0)
+                sys.exit(0)
+
             aGHA = listofGHA[0][0]
             vGHA = listofGHA[1][0]
             vDEC = listofGHA[1][1]
@@ -410,7 +419,14 @@ def planetstabm(date, ts):
             # multiprocess 'SHA + transit times' simultaneously
             objlist = ['aries', 'venus', 'mars', 'jupiter', 'saturn']
             partial_func2 = partial(mp_planetGHA_worker, date, ts)
-            listofGHA = pool.map(partial_func2, objlist, 1)     # RECOMMENDED: chunksize = 1
+
+            try:
+                # RECOMMENDED: chunksize = 1
+                listofGHA = pool.map(partial_func2, objlist, 1)
+            except KeyboardInterrupt:
+                print(msg0)
+                sys.exit(0)
+
             aGHA = listofGHA[0][0]
             vGHA = listofGHA[1][0]
             vDEC = listofGHA[1][1]
@@ -577,7 +593,14 @@ def starstab(date, ts):
             # multiprocess 'SHA + transit times' simultaneously
             objlist = ['venus', 'mars', 'jupiter', 'saturn']
             partial_func2 = partial(mp_planets_worker, datex, ts)
-            listofsha = pool.map(partial_func2, objlist, 1)     # RECOMMENDED: chunksize = 1
+
+            try:
+                # RECOMMENDED: chunksize = 1
+                listofsha = pool.map(partial_func2, objlist, 1)
+            except KeyboardInterrupt:
+                print(msg0)
+                sys.exit(0)
+
             for k in range(len(listofsha)):
                 config.stopwatch += listofsha[k][2]     # accumulate multiprocess processing time
                 del listofsha[k][-1]
@@ -633,7 +656,12 @@ def sunmoontab(date, ts):
     if config.MULTIpr and config.WINpf:
         # multiprocess sunmoontab values per "date" simultaneously
         partial_func = partial(mp_sunmoon_worker, date, ts)
-        sunmoonlist = pool.map(partial_func, [nn for nn in range(3)], 1)
+
+        try:
+            sunmoonlist = pool.map(partial_func, [nn for nn in range(3)], 1)
+        except KeyboardInterrupt:
+            print(msg0)
+            sys.exit(0)
 
     tab = r'''\noindent
 \setlength{\tabcolsep}{5.8pt}  % default 6pt
@@ -739,7 +767,12 @@ def sunmoontabm(date, ts):
     if config.MULTIpr and config.WINpf:
         # multiprocess sunmoontab values per "date" simultaneously
         partial_func = partial(mp_sunmoon_worker, date, ts)
-        sunmoonlist = pool.map(partial_func, [nn for nn in range(3)], 1)
+
+        try:
+            sunmoonlist = pool.map(partial_func, [nn for nn in range(3)], 1)
+        except KeyboardInterrupt:
+            print(msg0)
+            sys.exit(0)
 
     tab = r'''\noindent
 \renewcommand{\arraystretch}{1.1}
@@ -880,7 +913,14 @@ def twilighttab(date, ts):
         # multiprocess twilight values for "date+1" per latitude simultaneously
         # date+1 to calculate for the second day (three days are printed on one page)
         partial_func = partial(mp_twilight_worker, date+timedelta(days=1), ts)
-        listoftwi = pool.map(partial_func, config.lat, 1)   # RECOMMENDED: chunksize = 1
+
+        try:
+            # RECOMMENDED: chunksize = 1
+            listoftwi = pool.map(partial_func, config.lat, 1)
+        except KeyboardInterrupt:
+            print(msg0)
+            sys.exit(0)
+
         for k in range(len(listoftwi)):
             config.stopwatch += listoftwi[k][6]     # accumulate multiprocess processing time
             del listoftwi[k][-1]
@@ -888,7 +928,14 @@ def twilighttab(date, ts):
         # multiprocess moonlight values for "date, date+1, date+2" per latitude simultaneously
         data = [(config.lat[ii], moonvisible[ii]) for ii in range(len(config.lat))]
         partial_func2 = partial(mp_moonlight_worker, date, ts)  # list of tuples
-        listmoon = pool.starmap(partial_func2, data, 1)   # RECOMMENDED: chunksize = 1
+
+        try:
+            # RECOMMENDED: chunksize = 1
+            listmoon = pool.starmap(partial_func2, data, 1)
+        except KeyboardInterrupt:
+            print(msg0)
+            sys.exit(0)
+
         #print("listmoon = {}".format(listmoon))
         for k in range(len(listmoon)):
             tuple_seeks = listmoon[k][-1]
@@ -1175,7 +1222,7 @@ def doublepage(date, page1, ts):
     page = ''
     if not(page1):
         page = r'''
-% ------------------ N E W   P A G E ------------------
+% ------------------ N E W   E V E N   P A G E ------------------
 \newpage
 \restoregeometry    % reset to even-page margins'''
 
@@ -1187,13 +1234,8 @@ def doublepage(date, page1, ts):
 
     page = page + r'''
 \sffamily
-\noindent
-{}\textbf{{{}, {}, {} UT ({}.,  {}.,  {}.)}}'''.format(leftindent,date.strftime("%B %d"),(date+timedelta(days=1)).strftime("%d"),(date+timedelta(days=2)).strftime("%d"),date.strftime("%a"),(date+timedelta(days=1)).strftime("%a"),(date+timedelta(days=2)).strftime("%a"))
-
-    if config.tbls == "m":
-        page = page + r'\\[1.0ex]'  # \par leaves about 1.2ex
-    else:
-        page = page + r'\\[0.7ex]'
+\fancyhead[LE]{{{}\textsf{{\textbf{{{}, {}, {} UT ({}.,  {}.,  {}.)}}}}}}
+\setlength{{\headsep}}{{{}}} % [v2q]'''.format(leftindent, date.strftime("%B %d"), (date+timedelta(days=1)).strftime("%d"), (date+timedelta(days=2)).strftime("%d"), date.strftime("%a"), (date+timedelta(days=1)).strftime("%a"), (date+timedelta(days=2)).strftime("%a"), hds)
 
     page = page + r'''
 \begin{scriptsize}
@@ -1207,14 +1249,15 @@ def doublepage(date, page1, ts):
     page = page + starstab(date,ts)
     str1 = r'''
 \end{{scriptsize}}
-% ------------------ N E W   P A G E ------------------
+% ------------------ N E W   O D D   P A G E ------------------
 \newpage
 \newgeometry{{nomarginpar, top={}, bottom={}, left={}, right={}}}
-\begin{{flushleft}}     % required so that \par works
-{{\footnotesize {}}}\hfill\textbf{{{} to {} UT}}
-\end{{flushleft}}\par
+\fancyhead[LO]{{\textsf{{\footnotesize{{{}}}}}}}
+\fancyhead[RO]{{\textsf{{\textbf{{{} to {} UT}}}}}}
+\fancyheadoffset[RO]{{0pt}}  % bugfix - otherwise its shifted right
+\setlength{{\headsep}}{{{}}} % [v2q]
 \begin{{scriptsize}}
-'''.format(tm, bm, oddim, oddom, timeDUT1, date.strftime("%Y %B %d"), (date+timedelta(days=2)).strftime("%b. %d"), rightindent)
+'''.format(oddtm, oddbm, oddim, oddom, timeDUT1, date.strftime("%Y %B %d"), (date+timedelta(days=2)).strftime("%b. %d"), oddhds)
     page = page + str1
     if config.tbls == "m":
         page = page + sunmoontabm(date,ts)
@@ -1228,6 +1271,12 @@ def doublepage(date, page1, ts):
 \end{scriptsize}'''
     return page
 
+#   This simple but effective function eliminates endless keyboard interrupts
+#   each time Ctrl-C is issued, while none actually kill the parent process
+#   ... and this causes the Command Prompt window (in Windows, MPmode=0) to hang.
+def init_worker():
+    # Prevent child process from ever receiving a KeyboardInterrupt.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 def pages(first_day, dtp, ts):
     # dtp = 0 if for entire year; = -1 if for entire month; else days to print
@@ -1239,7 +1288,7 @@ def pages(first_day, dtp, ts):
         if n > 12: n = 12   # use 12 cores maximum
         if (config.WINpf or config.MACOSpf) and n > 8: n = 8   # 8 maximum if Windows or Mac OS
         global pool
-        pool = mp.Pool(n)   # start 8 max. worker processes
+        pool = mp.Pool(n, init_worker)   # start 8 max. worker processes
 
     out = ''
     page1 = True
@@ -1310,58 +1359,85 @@ def almanac(first_day, dtp, ts):
     # dtp = 0 if for entire year; = -1 if for entire month; else days to print
 
     # make almanac starting from first_day
-    global tm, bm, oddim, oddom
+    global tm, bm, hds, oddim, oddom, oddtm, oddbm, oddhds
     year = first_day.year
     mth = first_day.month
     day = first_day.day
 
     # page size specific parameters
+    # NOTE: 'bm' (bottom margin) is an unrealistic value used only to determine the vertical size of 'body' (textheight), which must be large enough to include all the tables. 'tm' (top margin) and 'hds' (headsep) determine the top of body. Finally use 'fs' (footskip) to position the footer.
     if config.pgsz == "A4":
-        # pay attention to the limited page width
+        # A4 ... pay attention to the limited page width
         paper = "a4paper"
+        # title page...
         vsep1 = "1.5cm"
         vsep2 = "1.0cm"
-        tm1 = "21mm"    # title page...
+        tm1 = "21mm"
         bm1 = "15mm"
         lm1 = "10mm"
         rm1 = "10mm"
-        tm = "21mm"     # data pages...
-        bm = "18mm"
+        # data pages...
+        tm = "34.5mm"       # data pages... was "21mm" [v2q]
+        bm = "10mm"         # was "18mm" [v2q]
+        hds = "1.8pt"       # headsep  (page 3 onwards) [v2q]
+        fs = "36pt"         # footskip (page 3 onwards) [v2q]
         # even data pages...
-        im = "10mm"     # inner margin (right side on even pages)
-        om = "9mm"      # outer margin (left side on even pages)
+        im = "10mm"         # inner margin (right side on even pages)
+        om = "9mm"          # outer margin (left side on even pages)
         # odd data pages...
-        oddim = "14mm"  # inner margin (left side on odd pages)
-        oddom = "11mm"  # outer margin (right side on odd pages)
+        oddtm = "34.5mm"    # was "21mm" [v2q]
+        oddbm = "12mm"      # was "18mm" [v2q]
+        oddhds = "6.5pt"    # headsep  (page 3 onwards) [v2q]
+        oddim = "14mm"      # inner margin (left side on odd pages)
+        oddom = "11mm"      # outer margin (right side on odd pages)
         if config.tbls == "m":
-            tm = "10mm"
-            bm = "15mm"
+            tm = "23.5mm"   # was "10mm" [v2q]
+            bm = "8mm"      # was "15mm" [v2q]
+            hds = "3.0pt"   # headsep  (page 3 onwards) [v2q]
+            fs = "36pt"     # footskip (page 3 onwards) [v2q]
             im = "10mm"
             om = "10mm"
+            # odd data pages...
+            oddtm = "23.5mm"    # was "10mm" [v2q]
+            oddbm = "8mm"       # was "15mm" [v2q]
+            oddhds = "4.6pt"    # headsep  (page 3 onwards) [v2q]
             oddim = "14mm"
             oddom = "11mm"
     else:
-        # pay attention to the limited page height
+        # LETTER ... pay attention to the limited page height
         paper = "letterpaper"
+        # title page...
         vsep1 = "0.8cm"
         vsep2 = "0.7cm"
-        tm1 = "12mm"    # title page...
+        tm1 = "12mm"
         bm1 = "15mm"
         lm1 = "12mm"
         rm1 = "12mm"
-        tm = "12.2mm"   # data pages...
-        bm = "13mm"
+        # data pages...
+        tm = "25.8mm"       # data pages... was "12.2mm" [v2q]
+        bm = "5mm"          # was "13mm" [v2q]
+        hds = "1.5pt"       # headsep  (page 3 onwards) [v2q]
+        fs = "28pt"         # footskip (page 3 onwards) [v2q]
         # even data pages...
-        im = "13mm"     # inner margin (right side on even pages)
-        om = "13mm"     # outer margin (left side on even pages)
+        im = "13mm"         # inner margin (right side on even pages)
+        om = "13mm"         # outer margin (left side on even pages)
         # odd data pages...
-        oddim = "14mm"  # inner margin (left side on odd pages)
-        oddom = "11mm"  # outer margin (right side on odd pages)
+        oddtm = "25.8mm"    # was "12.2mm" [v2q]
+        oddbm = "6.5mm"     # was "13mm" [v2q]
+        oddhds = "6.1pt"    # headsep  (page 3 onwards) [v2q]
+        oddim = "14mm"      # inner margin (left side on odd pages)
+        oddom = "11mm"      # outer margin (right side on odd pages)
         if config.tbls == "m":
-            tm = "4mm"
-            bm = "8mm"
+            tm = "17.6mm"   # was "4mm" [v2q]
+            bm = "2mm"      # was "8mm" [v2q]
+            hds = "2.8pt"   # headsep  (page 3 onwards) [v2q]
+            fs = "36pt"     # footskip (page 3 onwards) [v2q]
             im = "13mm"
             om = "13mm"
+            # odd data pages...
+            oddtm = "17.6mm"    # was "4mm" [v2q]
+            oddbm = "2mm"       # was "8mm" [v2q]
+            oddhds = "2.5pt"    # headsep  (page 3 onwards) [v2q]
             oddim = "14mm"
             oddom = "14mm"
 
@@ -1394,6 +1470,9 @@ def almanac(first_day, dtp, ts):
 \definecolor{khaki}{rgb}{0.76, 0.69, 0.57}
 \usepackage{multirow}
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\usepackage{fancyhdr}   % [v2q]
+\pagestyle{fancy}       % [v2q]
+\renewcommand{\headrulewidth}{0pt}  % [v2q]
 \setlength{\footskip}{15pt}
 \usepackage[pdftex]{graphicx}	% for \includegraphics
 \usepackage{tikz}				% for \draw  (load after 'graphicx')
@@ -1466,7 +1545,11 @@ def almanac(first_day, dtp, ts):
     Besides, this publication only contains the 'daily pages' of the Nautical Almanac: an official version of the Nautical Almanac is indispensable.
     \end{description}
 \end{titlepage}
-\restoregeometry    % so it does not affect the rest of the pages'''
+% DO NOT SPECIFY lfoot, cfoot & rfoot BEFORE restoregeometry!
+\restoregeometry    % so it does not affect the rest of the pages
+\lfoot{\textsf{\footnotesize{https://thenauticalalmanac.com/}}}
+\cfoot{\centerline{Page \thepage}}
+\rfoot{\textsf{\footnotesize{https://pypi.org/project/sfalmanac/}}}'''
 
     alm = alm + pages(first_day,dtp,ts)
     alm = alm + '''

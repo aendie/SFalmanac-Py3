@@ -24,6 +24,7 @@
 ###### Standard library imports ######
 from datetime import datetime, timedelta
 import sys			# required for .stdout.write()
+import signal       # for init_worker
 
 ###### Local application imports ######
 import config
@@ -49,6 +50,7 @@ else:
 
 UpperLists = [[], []]    # moon GHA per hour for 2 days
 LowerLists = [[], []]    # moon colong GHA per hour for 2 days
+msg0 = "\nKeyboardInterrupt detected - multiprocessing aborted."
 
 #------------------------
 #   internal functions
@@ -121,7 +123,14 @@ def twilighttab(date, ts):
         # multiprocess twilight values per latitude simultaneously
         if MPmode == 0:      # with pool.map
             partial_func = partial(mp_twilight_worker, date, ts)
-            listoftwi = pool.map(partial_func, config.lat, 1)   # RECOMMENDED: chunksize = 1
+
+            try:
+                # RECOMMENDED: chunksize = 1
+                listoftwi = pool.map(partial_func, config.lat, 1)
+            except KeyboardInterrupt:
+                print(msg0)
+                sys.exit(0)
+
         if MPmode == 1:      # with executor.map
             partial_func = partial(mp_twilight_worker, date, ts)
             future_value = executor.map(partial_func, config.lat)
@@ -135,7 +144,14 @@ def twilighttab(date, ts):
         # multiprocess moonrise/moonset values per latitude simultaneously
         if MPmode == 0:      # with pool.map
             partial_func2 = partial(mp_moonlight_worker, date, ts)
-            listmoon = pool.map(partial_func2, config.lat, 1)   # RECOMMENDED: chunksize = 1
+
+            try:
+                # RECOMMENDED: chunksize = 1
+                listmoon = pool.map(partial_func2, config.lat, 1)
+            except KeyboardInterrupt:
+                print(msg0)
+                sys.exit(0)
+
         if MPmode == 1:      # with executor.map
             partial_func2 = partial(mp_moonlight_worker, date, ts)
             future_val = executor.map(partial_func2, config.lat)
@@ -257,7 +273,13 @@ def meridiantab(date, ts):
         objlist = ['venus', 'mars', 'jupiter', 'saturn']
         # set constant values to all arguments which are not changed during parallel processing
         partial_func2 = partial(mp_planets_worker, date, ts)
-        listofsha = pool.map(partial_func2, objlist, 1)     # RECOMMENDED: chunksize = 1
+
+        try:
+            listofsha = pool.map(partial_func2, objlist, 1)     # RECOMMENDED: chunksize = 1
+        except KeyboardInterrupt:
+            print(msg0)
+            sys.exit(0)
+
         for k in range(len(listofsha)):
             config.stopwatch += listofsha[k][2]     # accumulate multiprocess processing time
             del listofsha[k][-1]
@@ -358,10 +380,8 @@ def page(date, ts, dpp):
 % ------------------ N E W   P A G E ------------------
 \newpage
 \sffamily
-\noindent
-\begin{{flushleft}}     % required so that \par works
-{{\footnotesize {}}}\hfill{}
-\end{{flushleft}}\par
+\lhead{{\noindent\textsf{{\footnotesize{{{}}}}}}}
+\rhead{{\textsf{{\textbf{{{}}}}}}}
 \begin{{scriptsize}}
 '''.format(timeDUT1, str2)
 
@@ -379,6 +399,13 @@ def page(date, ts, dpp):
 \end{scriptsize}'''
     return page
 
+#   This simple but effective function eliminates endless keyboard interrupts
+#   each time Ctrl-C is issued, while none actually kill the parent process
+#   ... and this causes the Command Prompt window (in Windows, MPmode=0) to hang.
+def init_worker():
+    # Prevent child process from ever receiving a KeyboardInterrupt.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
 def pages(first_day, dtp, ts):
     # dtp = 0 if for entire year; = -1 if for entire month; else days to print
 
@@ -390,10 +417,10 @@ def pages(first_day, dtp, ts):
         if (config.WINpf or config.MACOSpf) and n > 8: n = 8   # 8 maximum if Windows or Mac OS
         if MPmode == 0:
             global pool
-            pool = mp.Pool(n)   # start 8 max. worker processes
+            pool = mp.Pool(n, init_worker)   # start 8 max. worker processes
         if MPmode == 1:
             global executor
-            executor = concurrent.futures.ProcessPoolExecutor(max_workers=config.CPUcores)
+            executor = concurrent.futures.ProcessPoolExecutor(max_workers=config.CPUcores,initializer=init_worker)
 
     out = ''
     pmth = ''
@@ -475,30 +502,39 @@ def makeEVtables(first_day, dtp, ts):
     day = first_day.day
 
     # page size specific parameters
+    # NOTE: 'bm' (bottom margin) is an unrealistic value used only to determine the vertical size of 'body' (textheight), which must be large enough to include all the tables. 'tm' (top margin) and 'hs' (headsep) determine the top of body. Finally use 'fs' (footskip) to position the footer.
     if config.pgsz == "A4":
-        # pay attention to the limited page width
+        # A4 ... pay attention to the limited page width
         paper = "a4paper"
+        # title page...
         vsep1 = "1.5cm"
         vsep2 = "1.0cm"
-        tm1 = "21mm"    # title page...
+        tm1 = "21mm"
         bm1 = "15mm"
         lm1 = "10mm"
         rm1 = "10mm"
-        tm = "21mm"     # data pages...
-        bm = "18mm"
+        # data pages...
+        tm = "34.5mm"       # was "21mm" [v2q]
+        bm = "10mm"         # was "18mm" [v2q]
+        hs = "2.6pt"        # headsep  (page 3 onwards) [v2q]
+        fs = "36pt"         # footskip (page 3 onwards) [v2q]
         lm = "16mm"
         rm = "16mm"
     else:
-        # pay attention to the limited page height
+        # LETTER ... pay attention to the limited page height
         paper = "letterpaper"
+        # title page...
         vsep1 = "0.8cm"
         vsep2 = "0.7cm"
-        tm1 = "12mm"    # title page...
+        tm1 = "12mm"
         bm1 = "15mm"
         lm1 = "12mm"
         rm1 = "12mm"
-        tm = "12.2mm"   # data pages...
-        bm = "13mm"
+        # data pages...
+        tm = "25.7mm"       # was "12.2mm" [v2q]
+        bm = "9.5mm"        # was "13mm"
+        hs = "2.6pt"        # headsep  (page 3 onwards) [v2q]
+        fs = "28pt"         # footskip (page 3 onwards) [v2q]
         lm = "15mm"
         rm = "11mm"
 
@@ -513,7 +549,8 @@ def makeEVtables(first_day, dtp, ts):
 
     # to troubleshoot add "showframe, verbose," below:
     alm = alm + r'''
-\usepackage[nomarginpar, top={}, bottom={}, left={}, right={}]{{geometry}}'''.format(tm,bm,lm,rm)
+\usepackage[nomarginpar, top={}, bottom={}, left={}, right={}]{{geometry}}
+\setlength{{\headsep}}{{{}}} % [v2q]'''.format(tm,bm,lm,rm,hs)
 
     # Note: \DeclareUnicodeCharacter is not compatible with some versions of pdflatex
     alm = alm + r'''
@@ -521,6 +558,9 @@ def makeEVtables(first_day, dtp, ts):
 \definecolor{khaki}{rgb}{0.76, 0.69, 0.57}
 \usepackage{multirow}
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\usepackage{fancyhdr}   % [v2q]
+\pagestyle{fancy}       % [v2q]
+\renewcommand{\headrulewidth}{0pt}  % [v2q]
 \setlength{\footskip}{15pt}
 \usepackage[pdftex]{graphicx}	% for \includegraphics
 \usepackage{tikz}				% for \draw  (load after 'graphicx')
@@ -590,7 +630,11 @@ def makeEVtables(first_day, dtp, ts):
     The author claims no liability for any consequences arising from use of these tables.
     \end{description}
 \end{titlepage}
-\restoregeometry    % so it does not affect the rest of the pages'''
+% DO NOT SPECIFY lfoot, cfoot & rfoot BEFORE restoregeometry!
+\restoregeometry    % so it does not affect the rest of the pages
+\lfoot{\textsf{\footnotesize{https://thenauticalalmanac.com/}}}
+\cfoot{\centerline{Page \thepage}}
+\rfoot{\textsf{\footnotesize{https://pypi.org/project/sfalmanac/}}}'''
 
     alm = alm + pages(first_day,dtp,ts)
     alm = alm + '''

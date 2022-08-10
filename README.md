@@ -160,6 +160,13 @@ The PDF filenames have been revised (again), where 'A4' (or 'Letter') is the sel
 
 PATCH1: Sun SD added to Lunar Distance tables when appropriate
 
+**UPDATE: Aug 2022**
+
+The 'fancyhdr' LaTeX package is now used to format header and footer lines on a page. This is a more professional solution with added features. Footer lines now contain left-, center- and right-justified text.
+
+BUGFIX (solved here and in PyPI sfalmanac 1.9):
+Previously execution could hang when aborting a multiprocessing task (in nautical.py or eventtables.py) on entering Ctrl-C to kill all processes.
+
 ## Requirements
 
 &emsp;Most of the computation is done by the free Skyfield library.  
@@ -187,13 +194,13 @@ PATCH1: Sun SD added to Lunar Distance tables when appropriate
 
 &emsp;Tested on Windows 10 Pro, Version 20H2 with an AMD Ryzen 7 3700X 8-Core Processor  
 
-&emsp;Install Python 3.9.1 (should be in the system environment variable PATH, e.g. )  
-&emsp;&ensp;**C:\\Python39\Scripts;C:\\Python39;** .....  
+&emsp;Install Python 3.10.6 (should be in the system environment variable PATH, e.g. )  
+&emsp;&ensp;**C:\\Python310\Scripts;C:\\Python310;** .....  
 &emsp;Install MiKTeX 21.1 from https://miktex.org/  
 &emsp;When MiKTeX first runs it will require installation of additional packages.  
 &emsp;Run Command Prompt as Administrator, go to your Python folder and execute, e.g.:
 
-&emsp;**cd C:\\Python39**  
+&emsp;**cd C:\\Python310**  
 &emsp;**python.exe -m pip install --upgrade pip**  
 &emsp;... for a first install (it's preferable to install *wheel* first):  
 &emsp;**pip3 install wheel**  
