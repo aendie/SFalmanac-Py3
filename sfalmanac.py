@@ -841,10 +841,10 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             makePDF(listarg, fn, msg)
             tidy_up(fn, keeplog, keeptex)
 
-        elif s == '6':
+        elif s == '6':  # Increments and Corrections tables
             msg = "\nCreating the Increments and Corrections tables"
             print(msg)
-            fn = toUnix("Inc(A4)")
+            fn = toUnix("Inc({})").format(papersize)
             deletePDF(f_prefix + fn)
             # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
