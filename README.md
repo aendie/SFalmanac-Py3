@@ -191,7 +191,7 @@ Previously execution could hang when aborting a multiprocessing task (in nautica
 * Python v3.4 or higher (v3.10.x is recommended)
 * Skyfield >= 1.31 (the latest is recommended; see the Skyfield Changelog)
 * Pandas >= 1.0 (to decode the Hipparcos catalog; tested: 1.0.3 and 1.1.4)
-* Ephem >= 3.7.6 (required for some planet magnitudes)
+* Ephem = 4.1 (required for some planet magnitudes)
 * MiKTeX&ensp;or&ensp;TeX Live
 
 ## Files required in the execution folder:
