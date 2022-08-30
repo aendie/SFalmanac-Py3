@@ -20,9 +20,9 @@
 ###### Standard library imports ######
 import os
 import sys, site
-from sysconfig import get_path  # new in python 3.2
 import time
-import datetime
+from sysconfig import get_path  # new in python 3.2
+from datetime import date, datetime, timedelta
 from multiprocessing import cpu_count
 
 ###### Local application imports ######
@@ -31,6 +31,7 @@ import config
 config.WINpf = True if sys.platform.startswith('win') else False
 config.LINUXpf = True if sys.platform.startswith('linux') else False
 config.MACOSpf = True if sys.platform == 'darwin' else False
+config.FANCYhd = False  # default for TeX Live <= "TeX Live 2019/Debian"
 config.CPUcores = cpu_count()
 # NOTE: Multiprocessing on Windows using 'spawn' requires all variables modified
 #       and stored in config.py to be re-calculated for every spawned process!
@@ -120,7 +121,7 @@ def check_years(yearfr, yearto):
 
     if str(yearfr).isnumeric():
         if yrmin <= int(yearfr) <= yrmax:
-            first_day = datetime.date(int(yearfr), 1, 1)
+            first_day = date(int(yearfr), 1, 1)
         else:
             print("!! Please pick a year between {} and {} !!".format(yrmin,yrmax))
             sys.exit(0)
@@ -130,7 +131,7 @@ def check_years(yearfr, yearto):
 
     if str(yearto).isnumeric():
         if yrmin <= int(yearto) <= yrmax:
-            first_day_to = datetime.date(int(yearto), 1, 1)
+            first_day_to = date(int(yearto), 1, 1)
         else:
             print("!! Please pick a year between {} and {} !!".format(yrmin,yrmax))
             sys.exit(0)
@@ -215,20 +216,50 @@ def checkCoreCount():       # only called when config.MULTIpr == True
 
 if __name__ == '__main__':      # required for Windows multiprocessing compatibility
     if sys.version_info[0] < 3:
-        raise Exception("This runs only with Python 3")
+        print("This runs only with Python 3")
+        sys.exit(0)
+
+    # check if TeX Live is compatible with the 'fancyhdr' package...
+    process = os.popen("tex --version")
+    returned_value = process.read()
+    process.close()
+    if returned_value == "":
+        print("- - - Neither TeX Live nor MiKTeX is installed - - -")
+        sys.exit(0)
+    pos1 = returned_value.find("(") 
+    pos2 = returned_value.find(")")
+    if pos1 != -1 and pos2 != -1:
+        texver = returned_value[pos1+1:pos2]
+        # e.g. "TeX Live 2019/Debian", "TeX Live 2022/dev/Debian", "MiKTeX 22.7.30"
+        if texver[:8] == "TeX Live":
+            yrtxt = texver[9:13]
+            if yrtxt.isnumeric():
+                yr = int(yrtxt)
+                if yr >= 2020:
+                    config.FANCYhd = True  # TeX Live can handle the 'fancyhdr' package
+#                if yr < 2020:
+#                    print("TeX version = '" + texver + "'")
+#                    print("Upgrade TeX Live to 'TeX Live 2020' at least")
+#                    sys.exit(0)
+        else:
+            config.FANCYhd = True  # assume MiKTeX can handle the 'fancyhdr' package
 
     # command line arguments...
-    validargs = ['-v', '-q', '-log', '-tex', '-sky', '-d1', '-d2', '-d3', '-d4']
+    validargs = ['-v', '-q', '-log', '-tex', '-sky', '-old', 'a4', '-let', '-dpo', '-d1', '-d2', '-d3', '-d4']
     # (the 4 dummy arguments d1 d2 d3 d4 are specified in 'dockerfile')
     for i in list(range(1, len(sys.argv))):
         if sys.argv[i] not in validargs:
             print("Invalid argument: {}".format(sys.argv[i]))
             print("\nValid command line arguments are:")
-            print(" -v   ... to send pdfTeX output to the terminal")
+            print(" -v   ... 'verbose': to send pdfTeX output to the terminal")
             print(" -q   ... quiet mode for LD charts")
             print(" -log ... to keep the log file")
             print(" -tex ... to keep the tex file")
             print(" -sky ... stars only in LD charts")
+            print(" -old ... old formatting without the 'fancyhdr' package")
+            print(" -a4  ... A4 papersize")
+            print(" -let ... Letter papersize")
+            print(" -dpo ... data pages only")
             sys.exit(0)
 
     # NOTE: pdfTeX 3.14159265-2.6-1.40.21 (TeX Live 2020/Debian), as used in the Docker
@@ -238,9 +269,18 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
     keeptex = True if "-tex" in set(sys.argv[1:]) else False
     quietmode = True if "-q" in set(sys.argv[1:]) else False
     onlystars = True if "-sky" in set(sys.argv[1:]) else False
+    config.DPonly = True if "-dpo" in set(sys.argv[1:]) else False
+    if "-old" in set(sys.argv[1:]): config.FANCYhd = False  # don't use the 'fancyhdr' package
+    forcepgsz = False
+    if not("-a4" in set(sys.argv[1:]) and "-let" in set(sys.argv[1:])):
+        if "-a4" in set(sys.argv[1:]): forcepgsz = True
+        if "-let" in set(sys.argv[1:]): forcepgsz = True
+    if forcepgsz:
+        if "-a4" in set(sys.argv[1:]): config.pgsz = "A4"
+        if "-let" in set(sys.argv[1:]): config.pgsz = "Letter"
 
-    d = datetime.datetime.utcnow().date()
-    first_day = datetime.date(d.year, d.month, d.day)
+    d = datetime.utcnow().date()
+    first_day = date(d.year, d.month, d.day)
     yy = "%s" % d.year
 
     # if this code runs locally (not in Docker), the settings in config.py are used.
@@ -403,12 +443,12 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                     yy = ss[4:]
                     check_date(yy,mm,dd)
                 
-                first_day = datetime.date(int(yy), int(mm), int(dd))
+                first_day = date(int(yy), int(mm), int(dd))
                 d = first_day
 
                 if len(ss) in [2,3]:    # process entire month
                     entireMth = True
-                    daystoprocess = (d.replace(month = d.month%12 + 1, day = 1)-datetime.timedelta(days=1)).day
+                    daystoprocess = (d.replace(month = d.month%12 + 1, day = 1)-timedelta(days=1)).day
 
                 if not entireYr and not entireMth and daystoprocess == 0:
                     daystoprocess = 1       # default
@@ -471,12 +511,12 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                     print("!! Please pick a year between {} and {} !!".format(yrmin,yrmax))
                     sys.exit(0)
 
-                first_day = datetime.date(int(yy), int(mm), int(dd))
+                first_day = date(int(yy), int(mm), int(dd))
                 d = first_day
 
                 if len(ss) in [2,3]:     # process entire month
                     entireMth = True
-                    daystoprocess = (d.replace(month = d.month%12 + 1, day = 1)-datetime.timedelta(days=1)).day
+                    daystoprocess = (d.replace(month = d.month%12 + 1, day = 1)-timedelta(days=1)).day
 
                 if daystoprocess == 0:
                     daystoprocess = 1       # default
@@ -554,7 +594,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 msg = "\nCreating the nautical almanac for the year {}".format(year)
                 print(msg)
     ##            config.writeLOG(msg)
-                first_day = datetime.date(yearint, 1, 1)
+                first_day = date(yearint, 1, 1)
                 ff = "NAtrad" if config.tbls != 'm' else "NAmod"
                 fn = toUnix("{}({})_{}".format(ff,papersize,year+DecFmt))
                 deletePDF(f_prefix + fn)
@@ -617,7 +657,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             ff = "NAtrad" if config.tbls != 'm' else "NAmod"
             dto = ""
             if daystoprocess > 1:   # filename as 'from date'-'to date'
-                lastdate = d + datetime.timedelta(days=daystoprocess-1)
+                lastdate = d + timedelta(days=daystoprocess-1)
                 dto = lastdate.strftime("-%Y%m%d")
             fn = toUnix("{}({})_{}".format(ff,papersize,symd+dto+DecFmt))
             deletePDF(f_prefix + fn)
@@ -640,7 +680,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 year = "{:4d}".format(yearint)  # year = "%4d" %yearint
                 msg = "\nCreating the sun tables for the year {}".format(year)
                 print(msg)
-                first_day = datetime.date(yearint, 1, 1)
+                first_day = date(yearint, 1, 1)
                 ff = "STtrad" if config.tbls != 'm' else "STmod"
                 fn = toUnix("{}({})_{}".format(ff,papersize,year+DecFmt))
                 deletePDF(f_prefix + fn)
@@ -679,7 +719,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             ff = "STtrad" if config.tbls != 'm' else "STmod"
             dto = ""
             if daystoprocess > 1:   # filename as 'from date'-'to date'
-                lastdate = d + datetime.timedelta(days=daystoprocess-1)
+                lastdate = d + timedelta(days=daystoprocess-1)
                 dto = lastdate.strftime("-%Y%m%d")
             fn = toUnix("{}({})_{}".format(ff,papersize,symd+dto+DecFmt))
             deletePDF(f_prefix + fn)
@@ -703,7 +743,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 year = "{:4d}".format(yearint)  # year = "%4d" %yearint
                 msg = "\nCreating the event time tables for the year {}".format(year)
                 print(msg)
-                first_day = datetime.date(yearint, 1, 1)
+                first_day = date(yearint, 1, 1)
                 fn = toUnix("Event-Times({})_{}".format(papersize,year))
                 deletePDF(f_prefix + fn)
                 # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -747,7 +787,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             print(msg)
             fn = toUnix("Event-Times({})_{}".format(papersize,symd))
             if daystoprocess > 1:   # filename as 'from date'-'to date'
-                lastdate = d + datetime.timedelta(days=daystoprocess-1)
+                lastdate = d + timedelta(days=daystoprocess-1)
                 fn += lastdate.strftime("-%Y%m%d")
             deletePDF(f_prefix + fn)
             # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -770,12 +810,12 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                     year = "{:4d}".format(yearint)  # year = "%4d" %yearint
                     msg = "\nCreating the lunar distance tables for the year {}".format(year)
                     print(msg)
-                    daystoprocess = (datetime.date(yearint+1, 1, 1) - datetime.date(yearint, 1, 1)).days
+                    daystoprocess = (date(yearint+1, 1, 1) - date(yearint, 1, 1)).days
                     fn = toUnix("LDtable({})_{}".format(papersize,year))
-                    first_day = datetime.date(yearint, 1, 1)
+                    first_day = date(yearint, 1, 1)
                     # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                     outfile = open(fn + ".tex", mode="w", encoding="utf8")
-                    outfile.write(makeLDtables(first_day,strat,daystoprocess,entireMth,entireYr,spad))
+                    outfile.write(makeLDtables(first_day,0,strat))
                     outfile.close()
                     # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                     if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
@@ -788,20 +828,20 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
                 start = time.time()
                 if entireMth:
                     fn = toUnix("LDtable({})_{}".format(papersize,syr + '-' + smth))
-                    msg = "\nCreating the lunar distance tables for {}".format(syr + '-' + smth)
+                    msg = "\nCreating the lunar distance tables for {}".format(first_day.strftime("%B %Y"))
+                    daystoprocess = -1
                 else:
                     fn = toUnix("LDtable({})_{}".format(papersize,symd))
                     if daystoprocess > 1:   # filename as 'from date'-'to date'
-                        lastdate = first_day + datetime.timedelta(days=daystoprocess-1)
-                        lymd = lastdate.strftime("-%Y%m%d")
-                        fn += lymd
-                        msg = "\nCreating the lunar distance tables from {}".format(symd)
-                    else: msg = "\nCreating the lunar distance table for {}".format(symd)
+                        lastdate = first_day + timedelta(days=daystoprocess-1)
+                        fn += lastdate.strftime("-%Y%m%d")
+                    txt = "from" if daystoprocess > 1 else "for"
+                    msg = "\nCreating the lunar distance tables {} {}".format(txt,symd)
                 print(msg)
                 deletePDF(f_prefix + fn)
                 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                 outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
-                outfile.write(makeLDtables(first_day,strat,daystoprocess,entireMth,entireYr,spad))
+                outfile.write(makeLDtables(first_day,daystoprocess,strat))
                 outfile.close()
                 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                 if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY
@@ -817,9 +857,8 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             else:
                 fn = toUnix("LDchart({})_{}".format(papersize,symd))
                 if daystoprocess > 1:   # filename as 'from date'-'to date'
-                    lastdate = first_day + datetime.timedelta(days=daystoprocess-1)
-                    lymd = lastdate.strftime("-%Y%m%d")
-                    fn += lymd
+                    lastdate = first_day + timedelta(days=daystoprocess-1)
+                    fn += lastdate.strftime("-%Y%m%d")
             deletePDF(f_prefix + fn)
 
             start = time.time()
@@ -830,7 +869,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             print(msg)
             # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             outfile = open(f_prefix + fn + ".tex", mode="w", encoding="utf8")
-            makeLDcharts(first_day,strat,daystoprocess,outfile,spad,ts,onlystars,quietmode)
+            makeLDcharts(first_day,strat,daystoprocess,outfile,ts,onlystars,quietmode)
             outfile.close()
             # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
             if config.dockerized: os.chdir(os.getcwd() + f_postfix)     # DOCKER ONLY

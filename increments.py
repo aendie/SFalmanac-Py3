@@ -21,10 +21,7 @@
 ###### Standard library imports ######
 import os
 import sys
-from math import pi as pi
-from math import cos as cos
-from math import tan as tan
-from math import sqrt as sqrt
+from math import pi, cos, tan, sqrt
 
 ###### Local application imports ######
 import config

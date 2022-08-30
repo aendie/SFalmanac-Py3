@@ -59,9 +59,15 @@ CPUcores = 1        # CPU core count
 WINpf = False       # system platform
 LINUXpf = False     # system platform
 MACOSpf = False     # system platform
+FANCYhd = False     # 'True' if compatible with 'fancyhdr' package
+DPonly = False      # output data pages only
 
 # define global variables
 logfileopen = False
+useIERSEOP = False
+txtIERSEOP = ""     # footer text (using 'fancyhdr')
+endIERSEOP = ""     # footer text (using 'fancyhdr')
+dt_IERSEOP = None
 ephemeris = [['de421.bsp',1900,2050],['de405.bsp',1600,2200],['de406.bsp',1000,2750],['de430t.bsp',1550,2650],['de440.bsp',1550,2650]]
 tbls = ''		# table style (global variable)
 decf = ''		# Declination format (global variable)

@@ -3,15 +3,14 @@
 SFalmanac-Py3 is a Python 3 script that creates the daily pages of the Nautical Almanac **using the UT timescale**, as do Official Nautical Almanacs (this is equivalent to UT1).
 These are tables that are needed for celestial navigation with a sextant. Although you are strongly advised to purchase the official Nautical Almanac, this program will reproduce the tables with no warranty or guarantee of accuracy.
 
-SFalmanac-Py3 was originally developed with the intention of having identical output format as Pyalmanac-Py3. As opposed to the older Ephem astronomy library, the intention was for it to be based entirely on the newer Skyfield astronomical library: https://rhodesmill.org/skyfield/, however Ephem is still required to calculate some planet magnitudes. SFalmanac uses the star database in Skyfield, which is based on data from the Hipparcos Catalogue.
+SFalmanac-Py3 was developed with the intention of having identical output format as Pyalmanac-Py3. As opposed to the older Ephem astronomy library, the intention was for it to be based entirely on the newer Skyfield astronomical library: https://rhodesmill.org/skyfield/, however Ephem is still required to calculate some planet magnitudes. SFalmanac uses the star database in Skyfield, which is based on data from the Hipparcos Catalogue.
 
-SFalmanac-Py3 now employs the capability of multiprocessing (if your processor has multiple cores), making it acceptably fast. Single-processing is also optionally available in case one wants to compare the results. (The justification for Skyalmanac, a hybrid version that uses Ephem instead for the slow calcalculations, is no longer valid now that multiprocessing is available.)
+SFalmanac-Py3 now employs the capability of multiprocessing (if your processor has multiple cores), making it acceptably fast. Single-processing is also available as an option. (The justification for Skyalmanac, a hybrid version that uses Ephem only for the slow calcalculations, is no longer valid now that multiprocessing is available.)
 
-**Users are encouraged to install the Python Package Index (PyPI) edition to be found here:**
+**Users are encouraged to install the Python Package Index (PyPI) edition to be found here:**  
 https://pypi.org/project/sfalmanac/  
 
 The results have been crosschecked with USNO data to some extent.  
-(Nevertheless, constructive feedback is always appreciated.)
 
 **UPDATE: Nov 2019**
 
@@ -167,6 +166,22 @@ The 'fancyhdr' LaTeX package is now used to format header and footer lines on a 
 BUGFIX (solved here and in PyPI sfalmanac 1.9):
 Previously execution could hang when aborting a multiprocessing task (in nautical.py or eventtables.py) on entering Ctrl-C to kill all processes.
 
+**UPDATE: Sep 2022**
+
+* Three locations are tried to obtain *finals2000A.all* IERS EOP data
+* The LaTeX *fancyhdr* package is employed when MiKTeX (or a TeX Live version >= 2020) is detected.
+* Better support for Letter-sized pages.
+* Command line options:
+    * -v   ... 'verbose': to send pdfTeX output to the terminal
+	* -q   ... quiet mode for LD charts
+	* -sky ... stars only in LD charts
+    * -log ... to keep the log file
+    * -tex ... to keep the tex file
+    * -old ... old formatting without the 'fancyhdr' package
+    * -a4  ... A4 papersize
+    * -let ... Letter papersize
+    * -dpo ... data pages only
+
 ## Requirements
 
 &emsp;Most of the computation is done by the free Skyfield library.  
@@ -196,7 +211,7 @@ Previously execution could hang when aborting a multiprocessing task (in nautica
 
 &emsp;Install Python 3.10.6 (should be in the system environment variable PATH, e.g. )  
 &emsp;&ensp;**C:\\Python310\Scripts;C:\\Python310;** .....  
-&emsp;Install MiKTeX 21.1 from https://miktex.org/  
+&emsp;Install MiKTeX 22.7 from https://miktex.org/  
 &emsp;When MiKTeX first runs it will require installation of additional packages.  
 &emsp;Run Command Prompt as Administrator, go to your Python folder and execute, e.g.:
 
@@ -205,16 +220,16 @@ Previously execution could hang when aborting a multiprocessing task (in nautica
 &emsp;... for a first install (it's preferable to install *wheel* first):  
 &emsp;**pip3 install wheel**  
 &emsp;**pip3 uninstall pyephem ephem**  
-&emsp;**pip3 install ephem**  
+&emsp;**pip3 install ephem==4.1**  
 &emsp;**pip3 install skyfield**  
 &emsp;**pip3 install pandas**  
 &emsp;... if already installed, check for upgrades explicitly:  
-&emsp;**pip3 install --upgrade ephem skyfield pandas**  
+&emsp;**pip3 install --upgrade skyfield pandas**  
 
 &emsp;Put the required files for SFalmanac in a new folder, run Command Prompt in that folder and start with:  
 &emsp;**py -3 sfalmanac.py**
 
-&emsp;If using MiKTeX 21 or higher, executing 'option 5' (Increments and Corrections) will probably fail with  
+&emsp;If using MiKTeX 21 or higher, executing 'option 6' (Increments and Corrections) will probably fail with  
 &emsp;**! TeX capacity exceeded, sorry [main memory size=3000000].**  
 &emsp;To resolve this problem (assuming MiKTeX has been installed for all users),  
 &emsp;open a Command Prompt as Administrator and enter:  
@@ -236,7 +251,7 @@ Previously execution could hang when aborting a multiprocessing task (in nautica
 &emsp;Install the required astronomical libraries etc.:  
 &emsp;**pip3 install wheel**  
 &emsp;**pip3 uninstall pyephem ephem**  
-&emsp;**pip3 install ephem**  
+&emsp;**pip3 install ephem==4.1**  
 &emsp;**pip3 install skyfield**  
 &emsp;**pip3 install pandas**  
 
@@ -254,7 +269,7 @@ Previously execution could hang when aborting a multiprocessing task (in nautica
 &emsp;**sudo easy_install pip**  
 &emsp;**pip install wheel**  
 &emsp;**pip3 uninstall pyephem ephem**  
-&emsp;**pip3 install ephem**  
+&emsp;**pip3 install ephem==4.1**  
 &emsp;**pip install skyfield**  
 &emsp;**pip install pandas**  
 

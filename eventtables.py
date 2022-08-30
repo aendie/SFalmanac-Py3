@@ -22,7 +22,8 @@
 # https://docs.python.org/3/whatsnew/3.0.html#pep-3101-a-new-approach-to-string-formatting
 
 ###### Standard library imports ######
-from datetime import datetime, timedelta
+# don't confuse the 'date' method with the 'Date' variable!
+from datetime import date, datetime, timedelta
 import sys			# required for .stdout.write()
 import signal       # for init_worker
 
@@ -102,27 +103,27 @@ def double_events_found(m1, m2):
     return dbl
 
 # >>>>>>>>>>>>>>>>>>>>>>>>
-def mp_twilight_worker(date, ts, lat):
+def mp_twilight_worker(Date, ts, lat):
     #print(" mp_twilight_worker Start {}".format(lat))
     hemisph = 'N' if lat >= 0 else 'S'
-    twi = mp_twilight(date, lat, hemisph, ts, True) # ===>>> mp_eventtables.py
+    twi = mp_twilight(Date, lat, hemisph, ts, True) # ===>>> mp_eventtables.py
     #print(" mp_twilight_worker Finish {}".format(lat))
     return twi      # return list for all latitudes
 
-def mp_moonlight_worker(date, ts, lat):
+def mp_moonlight_worker(Date, ts, lat):
     #print(" mp_moonlight_worker Start  {}".format(lat))
     hemisph = 'N' if lat >= 0 else 'S'
-    ml = mp_moonrise_set(date, lat, hemisph, ts)    # ===>>> mp_eventtables.py
+    ml = mp_moonrise_set(Date, lat, hemisph, ts)    # ===>>> mp_eventtables.py
     #print(" mp_moonlight_worker Finish {}".format(lat))
     return ml       # return list for all latitudes
 
-def twilighttab(date, ts):
+def twilighttab(Date, ts):
     # returns the twilight and moonrise tables
 
     if config.MULTIpr:
         # multiprocess twilight values per latitude simultaneously
         if MPmode == 0:      # with pool.map
-            partial_func = partial(mp_twilight_worker, date, ts)
+            partial_func = partial(mp_twilight_worker, Date, ts)
 
             try:
                 # RECOMMENDED: chunksize = 1
@@ -132,7 +133,7 @@ def twilighttab(date, ts):
                 sys.exit(0)
 
         if MPmode == 1:      # with executor.map
-            partial_func = partial(mp_twilight_worker, date, ts)
+            partial_func = partial(mp_twilight_worker, Date, ts)
             future_value = executor.map(partial_func, config.lat)
             listoftwi = list(future_value)
 
@@ -143,7 +144,7 @@ def twilighttab(date, ts):
 
         # multiprocess moonrise/moonset values per latitude simultaneously
         if MPmode == 0:      # with pool.map
-            partial_func2 = partial(mp_moonlight_worker, date, ts)
+            partial_func2 = partial(mp_moonlight_worker, Date, ts)
 
             try:
                 # RECOMMENDED: chunksize = 1
@@ -153,7 +154,7 @@ def twilighttab(date, ts):
                 sys.exit(0)
 
         if MPmode == 1:      # with executor.map
-            partial_func2 = partial(mp_moonlight_worker, date, ts)
+            partial_func2 = partial(mp_moonlight_worker, Date, ts)
             future_val = executor.map(partial_func2, config.lat)
             listmoon = list(future_val)
 
@@ -172,7 +173,7 @@ def twilighttab(date, ts):
 %%%\multicolumn{9}{c}{\normalsize{}}\\
 '''
 
-    ondate = date.strftime("%d %B %Y")
+    ondate = Date.strftime("%d %B %Y")
     tab = tab + r'''\hline
 \multicolumn{{9}}{{|c|}}{{\rule{{0pt}}{{2.4ex}}{{\textbf{{{}}}}}}}\\
 '''.format(ondate)
@@ -213,8 +214,8 @@ def twilighttab(date, ts):
             moon = listmoon[j-5][0]
             moon2 = listmoon[j-5][1]
         else:
-            twi = twilight(date, lat, hemisph, True)
-            moon, moon2 = moonrise_set2(date, lat, hemisph)
+            twi = twilight(Date, lat, hemisph, True)
+            moon, moon2 = moonrise_set2(Date, lat, hemisph)
 
         if not(double_events_found(moon,moon2)):
             line = r'''\textbf{{{}}}'''.format(hs) + r''' {}$^\circ$'''.format(abs(lat))
@@ -258,13 +259,13 @@ def twilighttab(date, ts):
     return tab
 
 # >>>>>>>>>>>>>>>>>>>>>>>>
-def mp_planets_worker(date, ts, obj):
+def mp_planets_worker(Date, ts, obj):
     #print(" mp_planets_worker Start  {}".format(obj))
-    sha = mp_planetstransit(date, ts, obj, True)    # ===>>> mp_eventtables.py
+    sha = mp_planetstransit(Date, ts, obj, True)    # ===>>> mp_eventtables.py
     #print(" mp_planets_worker Finish {}".format(obj))
     return sha      # return list for four planets
 
-def meridiantab(date, ts):
+def meridiantab(Date, ts):
     # returns a table with ephemerides for the navigational stars
     # LaTeX SPACING: \enskip \quad \qquad
 
@@ -272,7 +273,7 @@ def meridiantab(date, ts):
         # multiprocess 'SHA + transit times' simultaneously
         objlist = ['venus', 'mars', 'jupiter', 'saturn']
         # set constant values to all arguments which are not changed during parallel processing
-        partial_func2 = partial(mp_planets_worker, date, ts)
+        partial_func2 = partial(mp_planets_worker, Date, ts)
 
         try:
             listofsha = pool.map(partial_func2, objlist, 1)     # RECOMMENDED: chunksize = 1
@@ -291,7 +292,7 @@ def meridiantab(date, ts):
 '''
     m = ""
     # returns a table with SHA & Mer.pass for Venus, Mars, Jupiter and Saturn
-    datestr = r'''{} {}'''.format(date.strftime("%b"), date.strftime("%d"))
+    datestr = r'''{} {}'''.format(Date.strftime("%b"), Date.strftime("%d"))
     m = m + r'''\hline
 & & \multicolumn{{1}}{{r|}}{{}}\\[-2.0ex]
 \textbf{{{}}} & \textbf{{SHA}} & \textbf{{Mer.pass}}\\
@@ -301,7 +302,7 @@ def meridiantab(date, ts):
     if config.MULTIpr and config.WINpf and MPmode == 0:
         p = [item for sublist in listofsha for item in sublist]
     else:
-        p = planetstransit(date, True)
+        p = planetstransit(Date, True)
 
     m = m + r'''Venus & {} & {} \\
 '''.format(p[0],p[1])
@@ -321,10 +322,10 @@ def meridiantab(date, ts):
     return out
 
 # >>>>>>>>>>>>>>>>>>>>>>>>
-def equationtab(date, dpp):
-    # returns the Equation of Time section for 'date' and 'date+1'
+def equationtab(Date, dpp):
+    # returns the Equation of Time section for 'Date' and 'Date+1'
 
-    d = date
+    d = Date
     # first create the UpperLists & LowerLists arrays ...
     nn = 0
     while nn < dpp:
@@ -346,7 +347,7 @@ def equationtab(date, dpp):
 \cline{1-7}\rule{0pt}{3.0ex}\noindent
 '''
 
-    d = date
+    d = Date
     for k in range(dpp):
         eq = equation_of_time(d,d + timedelta(days=1),UpperLists[k],LowerLists[k],True,True)
         tab = tab + r'''{} & {} & {} & {} & {} & {} & {}({}\%) \\
@@ -361,37 +362,60 @@ def equationtab(date, dpp):
 #   page preparation
 #----------------------
 
-def page(date, ts, dpp):
+def page(Date, ts, dpp):
 
     # time delta values for the initial date&time...
-    dut1, deltat = getDUT1(date)
+    dut1, deltat = getDUT1(Date)
     timeDUT1 = r"DUT1 = UT1-UTC = {:+.4f} sec\quad$\Delta$T = TT-UT1 = {:+.4f} sec".format(dut1, deltat)
 
-    find_new_moon(date)     # required for 'moonage' and 'equation_of_time"
+    Lfoot_IERSEOP = ""
+    if config.dt_IERSEOP != None:
+        # the IERS EOP data start date is 2nd January 1973
+        if Date + timedelta(days=1) >= date(1973, 1, 2):
+            Lfoot_IERSEOP = config.txtIERSEOP
+        if Date + timedelta(days=1) >= config.dt_IERSEOP:
+            Lfoot_IERSEOP = config.endIERSEOP
+        if Date > config.dt_IERSEOP:
+            Lfoot_IERSEOP = r'''\textbf{No IERS EOP prediction data available}'''
+
+    find_new_moon(Date)     # required for 'moonage' and 'equation_of_time"
     #leftindent = ""
     #rightindent = ""
 
     if dpp > 1:
-        str2 = r'''\textbf{{{} to {} UT}}'''.format(date.strftime("%Y %B %d"),(date+timedelta(days=dpp-1)).strftime("%b. %d"))
+        str2 = r'''\textbf{{{} to {} UT}}'''.format(Date.strftime("%Y %B %d"),(Date+timedelta(days=dpp-1)).strftime("%b. %d"))
     else:
-        str2 = r'''\textbf{{{} UT}}'''.format(date.strftime("%Y %B %d"))
+        str2 = r'''\textbf{{{} UT}}'''.format(Date.strftime("%Y %B %d"))
 
-    page = r'''
+    if config.FANCYhd:
+        page = r'''
 % ------------------ N E W   P A G E ------------------
 \newpage
 \sffamily
-\lhead{{\noindent\textsf{{\footnotesize{{{}}}}}}}
+\lhead{{\textsf{{\footnotesize{{{}}}}}}}
 \rhead{{\textsf{{\textbf{{{}}}}}}}
+\lfoot{{\textsf{{\footnotesize{{{}}}}}}}
+\begin{{scriptsize}}
+'''.format(timeDUT1, str2, Lfoot_IERSEOP)
+    else:   # old formatting
+        page = r'''
+% ------------------ N E W   P A G E ------------------
+\newpage
+\sffamily
+\noindent
+\begin{{flushleft}}     % required so that \par works
+{{\footnotesize {}}}\hfill{}
+\end{{flushleft}}\par
 \begin{{scriptsize}}
 '''.format(timeDUT1, str2)
 
-    date2 = date+timedelta(days=1)
-    page += twilighttab(date,ts)
-    page += meridiantab(date,ts)
+    Date2 = Date+timedelta(days=1)
+    page += twilighttab(Date,ts)
+    page += meridiantab(Date,ts)
     if dpp == 2:
-        page += twilighttab(date2,ts)
-        page += meridiantab(date2,ts)
-    page += equationtab(date,dpp)
+        page += twilighttab(Date2,ts)
+        page += meridiantab(Date2,ts)
+    page += equationtab(Date,dpp)
 
     # to avoid "Overfull \hbox" messages, leave a paragraph end before the end of a size change. (This may only apply to tabular* table style) See lines below...
     page = page + r'''
@@ -448,6 +472,7 @@ def pages(first_day, dtp, ts):
             out += page(day1,ts,dpp)
             day1 += timedelta(days=2)
             year = day1.year
+
     elif dtp == -1:     # if entire month
         mth = first_day.month
         m = mth
@@ -469,6 +494,7 @@ def pages(first_day, dtp, ts):
             out += page(day1,ts,dpp)
             day1 += timedelta(days=2)
             mth = day1.month
+
     else:           # print 'dtp' days beginning with first_day
         i = dtp   # don't decrement dtp
         while i > 0:
@@ -494,12 +520,83 @@ def pages(first_day, dtp, ts):
 #--------------------------
 
 def makeEVtables(first_day, dtp, ts):
+    # make tables starting from first_day
     # dtp = 0 if for entire year; = -1 if for entire month; else days to print
 
+    if config.FANCYhd:
+        return makeEVnew(first_day, dtp, ts) # use the 'fancyhdr' package
+    else:
+        return makeEVold(first_day, dtp, ts) # use old formatting
+
+#   The following functions are intentionally separate functions.
+#   'makeEVold' is required for TeX Live 2019, which is the standard
+#   version in Ubuntu 20.04 LTS which expires in April 2030.
+
+def hdrEVnew(first_day, dtp, vsep1, vsep2):
+    # build the front page
+
+    tex = r'''
+    \begin{titlepage}
+    \begin{center}
+    \textsc{\Large Generated using Skyfield}\\
+    \large http://rhodesmill.org/skyfield/\\[0.7cm]'''
+
+    if config.dockerized:   # DOCKER ONLY
+        fn1 = "../A4chart0-180_P.pdf"
+        fn2 = "../A4chart180-360_P.pdf"
+    else:
+        fn1 = "./A4chart0-180_P.pdf"
+        fn2 = "./A4chart180-360_P.pdf"
+
+    tex += r'''
+    % TRIM values: left bottom right top
+    \includegraphics[clip, trim=12mm 20cm 12mm 21mm, width=0.92\textwidth]{{{}}}\\[0.3cm]
+    \includegraphics[clip, trim=12mm 20cm 12mm 21mm, width=0.92\textwidth]{{{}}}\\'''.format(fn1,fn2)
+
+    tex += r'''[{}]
+    \textsc{{\huge Event Time Tables}}\\[{}]'''.format(vsep1,vsep2)
+
+    if dtp == 0:
+        tex += r'''
+    \HRule \\[0.5cm]
+    {{ \Huge \bfseries {}}}\\[0.2cm]
+    \HRule \\'''.format(first_day.year)
+    elif dtp == -1:
+        tex += r'''
+    \HRule \\[0.5cm]
+    {{ \Huge \bfseries {}}}\\[0.2cm]
+    \HRule \\'''.format(first_day.strftime("%B %Y"))
+    elif dtp > 1:
+        tex += r'''
+    \HRule \\[0.5cm]
+    {{ \Huge \bfseries {}}}\\[0.2cm]
+    \HRule \\'''.format(fmtdates(first_day,first_day+timedelta(days=dtp-1)))
+    else:
+        tex += r'''
+    \HRule \\[0.5cm]
+    {{ \Huge \bfseries {}}}\\[0.2cm]
+    \HRule \\'''.format(fmtdate(first_day))
+
+    tex += r'''
+    \begin{center}\begin{tabular}[t]{rl}
+    \large\emph{Author:} & \large Andrew \textsc{Bauer}\\
+    \end{tabular}\end{center}'''
+
+    tex += r'''
+    {\large \today}
+    \HRule \\[0.2cm]
+    \end{center}
+    \begin{description}[leftmargin=5.5em,style=nextline]\footnotesize
+    \item[Disclaimer:] These are computer generated tables. They focus on times of rising and setting events and are rounded to the second (not primarily intended for navigation). Meridian Passage times of the sun, moon and four planets are included. All times are in UT (=UT1).
+    The author claims no liability for any consequences arising from use of these tables.
+    \end{description}
+\end{titlepage}'''
+
+    return tex
+
+def makeEVnew(first_day, dtp, ts):
     # make tables starting from first_day
-    year = first_day.year
-    mth = first_day.month
-    day = first_day.day
+    # dtp = 0 if for entire year; = -1 if for entire month; else days to print
 
     # page size specific parameters
     # NOTE: 'bm' (bottom margin) is an unrealistic value used only to determine the vertical size of 'body' (textheight), which must be large enough to include all the tables. 'tm' (top margin) and 'hs' (headsep) determine the top of body. Finally use 'fs' (footskip) to position the footer.
@@ -514,10 +611,10 @@ def makeEVtables(first_day, dtp, ts):
         lm1 = "10mm"
         rm1 = "10mm"
         # data pages...
-        tm = "34.5mm"       # was "21mm" [v2q]
-        bm = "10mm"         # was "18mm" [v2q]
+        tm = "26.6mm"       # was "21mm" [v2q]
+        bm = "18mm"         # was "18mm" [v2q]
         hs = "2.6pt"        # headsep  (page 3 onwards) [v2q]
-        fs = "36pt"         # footskip (page 3 onwards) [v2q]
+        fs = "15pt"         # footskip (page 3 onwards) [v2q]
         lm = "16mm"
         rm = "16mm"
     else:
@@ -531,50 +628,85 @@ def makeEVtables(first_day, dtp, ts):
         lm1 = "12mm"
         rm1 = "12mm"
         # data pages...
-        tm = "25.7mm"       # was "12.2mm" [v2q]
-        bm = "9.5mm"        # was "13mm"
+        tm = "17.8mm"       # was "12.2mm" [v2q]
+        bm = "17mm"         # was "13mm"
         hs = "2.6pt"        # headsep  (page 3 onwards) [v2q]
-        fs = "28pt"         # footskip (page 3 onwards) [v2q]
+        fs = "15pt"         # footskip (page 3 onwards) [v2q]
         lm = "15mm"
         rm = "11mm"
 
     # default is 'oneside'...
-    alm = r'''\documentclass[10pt, {}]{{report}}'''.format(paper)
+    tex = r'''\documentclass[10pt, {}]{{report}}'''.format(paper)
 
-    alm = alm + r'''
+    tex += r'''
 %\usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage{fontenc}
 \usepackage{enumitem} % used to customize the {description} environment'''
 
     # to troubleshoot add "showframe, verbose," below:
-    alm = alm + r'''
-\usepackage[nomarginpar, top={}, bottom={}, left={}, right={}]{{geometry}}
-\setlength{{\headsep}}{{{}}} % [v2q]'''.format(tm,bm,lm,rm,hs)
+    tex += r'''
+\usepackage[nomarginpar, top={}, bottom={}, left={}, right={}]{{geometry}}'''.format(tm1,bm1,lm1,rm1)
+
+    # define page styles
+    # CAUTION: putting '\fancyhf{}' in frontpage style also clears the footer in page2!
+    tex += r'''
+%------------ page styles ------------
+\usepackage{fancyhdr}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{frontpage}{
+}
+\fancypagestyle{page2}[frontpage]{
+  \fancyfootoffset[R]{0pt}% recalculate \headwidth
+  \lfoot{\textsf{\footnotesize{https://thenauticalalmanac.com/}}}
+  \cfoot{\centerline{Page \thepage}}
+}
+\fancypagestyle{datapage}[page2]{'''
+    tex += r'''
+  \newgeometry{{nomarginpar, top={}, bottom={}, left={}, right={}, headsep={}, footskip={}}}'''.format(tm,bm,lm,rm,hs,fs)
+    tex += r'''
+  \rfoot{\textsf{\footnotesize{https://pypi.org/project/sfalmanac/}}}
+} %-----------------------------------'''
 
     # Note: \DeclareUnicodeCharacter is not compatible with some versions of pdflatex
-    alm = alm + r'''
+    tex += r'''
 \usepackage{xcolor}  % highlight double moon events on same day
 \definecolor{khaki}{rgb}{0.76, 0.69, 0.57}
 \usepackage{multirow}
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
-\usepackage{fancyhdr}   % [v2q]
-\pagestyle{fancy}       % [v2q]
-\renewcommand{\headrulewidth}{0pt}  % [v2q]
-\setlength{\footskip}{15pt}
 \usepackage[pdftex]{graphicx}	% for \includegraphics
 \usepackage{tikz}				% for \draw  (load after 'graphicx')
 %\showboxbreadth=50  % use for logging
 %\showboxdepth=50    % use for logging
 %\DeclareUnicodeCharacter{00B0}{\ensuremath{{}^\circ}}
 \setlength\fboxsep{1.5pt}       % ONLY used by \colorbox in alma_skyfield.py
-\begin{document}'''
+\begin{document}
+\pagestyle{frontpage}'''
 
-    alm = alm + r'''
+    if not config.DPonly:
+        tex += hdrEVnew(first_day,dtp,vsep1,vsep2)
+
+    tex += r'''
+\pagestyle{datapage}  % page style for data pages'''
+
+    tex += pages(first_day,dtp,ts)
+    tex += r'''
+\end{document}'''
+    return tex
+
+# ===   ===   ===   ===   ===   ===   ===   ===   ===   ===   ===   ===   ===
+# ===   ===   ===   ===   O L D   F O R M A T T I N G   ===   ===   ===   ===
+# ===   ===   ===   ===   ===   ===   ===   ===   ===   ===   ===   ===   ===
+
+def hdrEVold(first_day, dtp, tm1, bm1, lm1, rm1, vsep1, vsep2):
+    # build the front page
+
+    tex = r'''
 % for the title page only...
 \newgeometry{{nomarginpar, top={}, bottom={}, left={}, right={}}}'''.format(tm1,bm1,lm1,rm1)
 
-    alm = alm + r'''
+    tex += r'''
     \begin{titlepage}
     \begin{center}
     \textsc{\Large Generated using Skyfield}\\
@@ -587,41 +719,41 @@ def makeEVtables(first_day, dtp, ts):
         fn1 = "./A4chart0-180_P.pdf"
         fn2 = "./A4chart180-360_P.pdf"
 
-    alm = alm + r'''
+    tex += r'''
     % TRIM values: left bottom right top
     \includegraphics[clip, trim=12mm 20cm 12mm 21mm, width=0.92\textwidth]{{{}}}\\[0.3cm]
     \includegraphics[clip, trim=12mm 20cm 12mm 21mm, width=0.92\textwidth]{{{}}}\\'''.format(fn1,fn2)
 
-    alm = alm + r'''[{}]
+    tex += r'''[{}]
     \textsc{{\huge Event Time Tables}}\\[{}]'''.format(vsep1,vsep2)
 
     if dtp == 0:
-        alm = alm + r'''
+        tex += r'''
     \HRule \\[0.5cm]
     {{ \Huge \bfseries {}}}\\[0.2cm]
-    \HRule \\'''.format(year)
+    \HRule \\'''.format(first_day.year)
     elif dtp == -1:
-        alm = alm + r'''
+        tex += r'''
     \HRule \\[0.5cm]
     {{ \Huge \bfseries {}}}\\[0.2cm]
     \HRule \\'''.format(first_day.strftime("%B %Y"))
     elif dtp > 1:
-        alm = alm + r'''
+        tex += r'''
     \HRule \\[0.5cm]
     {{ \Huge \bfseries {}}}\\[0.2cm]
     \HRule \\'''.format(fmtdates(first_day,first_day+timedelta(days=dtp-1)))
     else:
-        alm = alm + r'''
+        tex += r'''
     \HRule \\[0.5cm]
     {{ \Huge \bfseries {}}}\\[0.2cm]
     \HRule \\'''.format(fmtdate(first_day))
 
-    alm = alm + r'''
+    tex += r'''
     \begin{center}\begin{tabular}[t]{rl}
     \large\emph{Author:} & \large Andrew \textsc{Bauer}\\
     \end{tabular}\end{center}'''
 
-    alm = alm + r'''
+    tex += r'''
     {\large \today}
     \HRule \\[0.2cm]
     \end{center}
@@ -630,13 +762,74 @@ def makeEVtables(first_day, dtp, ts):
     The author claims no liability for any consequences arising from use of these tables.
     \end{description}
 \end{titlepage}
-% DO NOT SPECIFY lfoot, cfoot & rfoot BEFORE restoregeometry!
-\restoregeometry    % so it does not affect the rest of the pages
-\lfoot{\textsf{\footnotesize{https://thenauticalalmanac.com/}}}
-\cfoot{\centerline{Page \thepage}}
-\rfoot{\textsf{\footnotesize{https://pypi.org/project/sfalmanac/}}}'''
+\restoregeometry    % so it does not affect the rest of the pages'''
 
-    alm = alm + pages(first_day,dtp,ts)
-    alm = alm + '''
+    return tex
+
+def makeEVold(first_day, dtp, ts):
+    # make tables starting from first_day
+    # dtp = 0 if for entire year; = -1 if for entire month; else days to print
+
+    # page size specific parameters
+    if config.pgsz == "A4":
+        # pay attention to the limited page width
+        paper = "a4paper"
+        vsep1 = "1.5cm"
+        vsep2 = "1.0cm"
+        tm1 = "21mm"    # title page...
+        bm1 = "15mm"
+        lm1 = "10mm"
+        rm1 = "10mm"
+        tm = "21mm"     # data pages...
+        bm = "18mm"
+        lm = "16mm"
+        rm = "16mm"
+    else:
+        # pay attention to the limited page height
+        paper = "letterpaper"
+        vsep1 = "0.8cm"
+        vsep2 = "0.7cm"
+        tm1 = "12mm"    # title page...
+        bm1 = "15mm"
+        lm1 = "12mm"
+        rm1 = "12mm"
+        tm = "12.2mm"   # data pages...
+        bm = "13mm"
+        lm = "15mm"
+        rm = "11mm"
+
+    # default is 'oneside'...
+    tex = r'''\documentclass[10pt, {}]{{report}}'''.format(paper)
+
+    tex += r'''
+%\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{fontenc}
+\usepackage{enumitem} % used to customize the {description} environment'''
+
+    # to troubleshoot add "showframe, verbose," below:
+    tex += r'''
+\usepackage[nomarginpar, top={}, bottom={}, left={}, right={}]{{geometry}}'''.format(tm,bm,lm,rm)
+
+    # Note: \DeclareUnicodeCharacter is not compatible with some versions of pdflatex
+    tex += r'''
+\usepackage{xcolor}  % highlight double moon events on same day
+\definecolor{khaki}{rgb}{0.76, 0.69, 0.57}
+\usepackage{multirow}
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\setlength{\footskip}{15pt}
+\usepackage[pdftex]{graphicx}	% for \includegraphics
+\usepackage{tikz}				% for \draw  (load after 'graphicx')
+%\showboxbreadth=50  % use for logging
+%\showboxdepth=50    % use for logging
+%\DeclareUnicodeCharacter{00B0}{\ensuremath{{}^\circ}}
+\setlength\fboxsep{1.5pt}       % ONLY used by \colorbox in alma_skyfield.py
+\begin{document}'''
+
+    if not config.DPonly:
+        tex += hdrEVold(first_day,dtp,tm1,bm1,lm1,rm1,vsep1,vsep2)
+
+    tex += pages(first_day,dtp,ts)
+    tex += r'''
 \end{document}'''
-    return alm
+    return tex

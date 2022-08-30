@@ -19,13 +19,15 @@
 # Skyfield functions for Lunar Distance tables and charts
 
 ###### Standard library imports ######
-import datetime
-import math
+from datetime import date
+from math import atan, degrees, copysign
 import os
 import errno
 import socket
 import sys			# required for .stdout.write()
+import urllib.error # used in 'download_EOP' function
 from urllib.request import urlopen
+from collections import deque
 
 ###### Third party imports ######
 from skyfield import VERSION
@@ -42,6 +44,10 @@ import ld_stardata
 #---------------------------
 #   Module initialization
 #---------------------------
+
+urlIERS = "ftp://ftp.iers.org/products/eop/rapid/standard/"
+urlUSNO = "https://maia.usno.navy.mil/ser7/"        # alternate location
+urlDCIERS = "https://datacenter.iers.org/data/9/"   # alternate location
 
 hour_of_day3 = [0, 12, 24]
 hour_of_day5 = [0, 6, 12, 18, 24]
@@ -84,8 +90,7 @@ def isConnected():
 #       however, although the USNO server currently works, it was previously down for 2.5 years!
 #       So it is still best to try using the IERS server as first oprion, and USNO as second.
 
-def testIERSserver(filename):
-    url = "ftp://ftp.iers.org/products/eop/rapid/standard/" + filename
+def testServer(filename, url):
     try:
         connection2 = urlopen(url)
     except Exception as e:
@@ -95,14 +100,19 @@ def testIERSserver(filename):
         return False
     return True     # server works
 
-def downloadUSNO(path, filename):
+def download_EOP(path, filename, url, loc):
     # NOTE: the following 'print' statement does not print immediately in Linux!
     #print("Downloading EOP data from USNO...", end ="")
-    sys.stdout.write("Downloading EOP data from USNO...")
+    sys.stdout.write("Downloading EOP data from {}...".format(loc))
     sys.stdout.flush()
     filepath = os.path.join(path, filename)
-    url = "https://maia.usno.navy.mil/ser7/" + filename
-    connection = urlopen(url)
+    url += filename
+    try:
+        connection = urlopen(url)
+    except urllib.error.URLError as e:
+        #raise IOError('error getting {0} - {1}'.format(url, e))
+        print('\nError getting {0} - {1}'.format(url, e))
+        sys.exit(0)
     blocksize = 128*1024
 
     # Claim our own unique download filename.
@@ -145,7 +155,6 @@ def downloadUSNO(path, filename):
     except Exception as e:
         raise IOError('error renaming {0} to {1} - {2}'.format(tempname, filepath, e))
 
-    #print("done.")
     sys.stdout.write("done.\n")
     sys.stdout.flush()
 
@@ -154,21 +163,33 @@ def ld_init_sf(spad):
     load = Loader(spad)         # spad = folder to store the downloaded files
     EOPdf  = "finals2000A.all"  # Earth Orientation Parameters data file
     dfIERS = spad + EOPdf
+    config.useIERSEOP = False
+    config.txtIERSEOP = ""
 
     if config.useIERS:
         if compareVersion(VERSION, "1.31") >= 0:
             if os.path.isfile(dfIERS):
                 if load.days_old(EOPdf) > float(config.ageIERS):
                     if isConnected():
-                        if testIERSserver(EOPdf): load.download(EOPdf)
-                        else: downloadUSNO(spad,EOPdf)
+                        if testServer(EOPdf, urlIERS):  # first try downloading via FTP
+                            load.download(EOPdf)
+                        elif testServer(EOPdf, urlUSNO):# then try the USNO server
+                            download_EOP(spad,EOPdf,urlUSNO,"USNO")
+                        else:   # finally try the IERS datacenter (available in more countries)
+                            download_EOP(spad,EOPdf,urlDCIERS,"IERS datacenter")
                     else: print("NOTE: no Internet connection... using existing '{}'".format(EOPdf))
                 ts = load.timescale(builtin=False)	# timescale object
+                config.useIERSEOP = True
             else:
                 if isConnected():
-                    if testIERSserver(EOPdf): load.download(EOPdf)
-                    else: downloadUSNO(spad,EOPdf)
+                    if testServer(EOPdf, urlIERS):  # first try downloading via FTP
+                        load.download(EOPdf)
+                    elif testServer(EOPdf, urlUSNO):# then try the USNO server
+                        download_EOP(spad,EOPdf,urlUSNO,"USNO")
+                    else:   # finally try the IERS datacenter (available in more countries)
+                        download_EOP(spad,EOPdf,urlDCIERS,"IERS datacenter")
                     ts = load.timescale(builtin=False)	# timescale object
+                    config.useIERSEOP = True
                 else:
                     print("NOTE: no Internet connection... using built-in UT1-tables")
                     ts = load.timescale()	# timescale object with built-in UT1-tables
@@ -176,6 +197,64 @@ def ld_init_sf(spad):
             ts = load.timescale()	# timescale object with built-in UT1-tables
     else:
         ts = load.timescale()	# timescale object with built-in UT1-tables
+
+    if config.useIERSEOP and os.path.isfile(dfIERS):
+# get the IERS EOP data "release date" according to these rules:
+#   - begin searching within this millenium (ignoring data from 02 Jan 1973 to 31 Dec 1999)
+#   - halt when the following value is "P", i.e. predicted as opposed to measured:
+#       - flag for Bull. A UT1-UTC values
+#   - step back one day to the record that has "I", i.e. measured data.
+#
+# the date of this record is the last date with IERS measured data.
+#   [the more recent the date, the more accurate/reliable are both the past IERS
+#   Earth Orientation Parameters as well as the future (predicted) EOP data values.]
+
+# IERS EOP data format definition:
+# https://maia.usno.navy.mil/ser7/readme.finals2000A
+
+        queue = deque(["a", "b", "c", "d"])
+        PredData = False    # True when Prediction data flagged
+        PredEnd  = False    # True when Prediction data no longer flagged
+
+        with open(dfIERS) as file:
+            for line in file:
+                mjd = int(line[7:12])
+
+                if not PredData and mjd >= 51544:    # skip data in previous  millenium
+                    queue.append(line)
+                    queue.popleft()
+                    c1 = line[16:17]    # IERS (I) or Prediction (P) flag for Bull. A polar motion values
+                    c2 = line[57:58]    # IERS (I) or Prediction (P) flag for Bull. A UT1-UTC values
+                    c3 = line[95:96]    # IERS (I) or Prediction (P) flag for Bull. A nutation values
+                    if not PredData and c2 == "P":
+                        PredData = True
+                        iers = ""
+                        while queue:
+                            iersdata = queue.pop()
+                            if iersdata[57:58] == "I":
+                                iers = iersdata
+                                break
+                        if iers == "": iers = iersdata
+                        year = int(iers[0:2]) + 2000
+                        mth  = int(iers[2:4])
+                        day  = int(iers[4:6])
+                        dt = date(year, mth, day)
+                        config.txtIERSEOP = "IERS Earth Orientation data as of " + dt.strftime("%d-%b-%Y")
+                elif PredData:    # search for end of Prediction data
+                    c2 = line[57:58]    # IERS (I) or Prediction (P) flag for Bull. A UT1-UTC values
+                    if c2 == "P":
+                        iers = line
+                    else:
+                        PredEnd = True
+                        break
+
+        # detect end of Prediction data even if file ends with c2 == "P" ...
+        year = int(iers[0:2]) + 2000
+        mth  = int(iers[2:4])
+        day  = int(iers[4:6])
+        dt2 = date(year, mth, day)
+        config.endIERSEOP = "IERS Earth Orientation predictions end " + dt2.strftime("%d-%b-%Y")
+        config.dt_IERSEOP = dt2
 
     if config.ephndx in set([0, 1, 2, 3, 4]):
     
@@ -276,8 +355,8 @@ def moon_SD(d):         # used in moontab
     position = earth.at(t00).observe(moon)
     distance = position.apparent().radec(epoch='date')[2]
     dist_km = distance.km
-# OLD: sdm = math.degrees(math.atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
-    sdm = math.degrees(math.atan(1737.4/dist_km))   # volumetric mean radius of moon = 1737.4 km
+# OLD: sdm = degrees(atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+    sdm = degrees(atan(1737.4/dist_km))   # volumetric mean radius of moon = 1737.4 km
     sdmm = "{:0.1f}".format(sdm * 60)  # convert to minutes of arc
     return sdmm
 
@@ -314,8 +393,8 @@ def moon_GHA(d):        # used in moontab
         decm[i] = fmtdeg(dec.degrees[i],2)
         degm[i] = dec.degrees[i]
         dist_km = distance.km[i]
-# OLD:  HP = math.degrees(math.atan(6378.0/dist_km))	# radius of earth = 6378.0 km
-        HP = math.degrees(math.atan(6371.0/dist_km))	# volumetric mean radius of earth = 6371.0 km
+# OLD:  HP = degrees(atan(6378.0/dist_km))	# radius of earth = 6378.0 km
+        HP = degrees(atan(6371.0/dist_km))	# volumetric mean radius of earth = 6371.0 km
         HPm[i] = "{:0.1f}'".format(HP * 60)     # convert to minutes of arc
 
     # degm has been added for the sunmoontab function
@@ -505,7 +584,7 @@ def sunSD(d):
         distance = position.apparent().radec(epoch='date')[2]
         dist_km = distance.km
         # volumetric mean radius of sun = 695700 km
-        sds = math.degrees(math.atan(695700.0 / dist_km))
+        sds = degrees(atan(695700.0 / dist_km))
         sdsm[i] = "{:0.1f}".format(sds * 60)   # convert to minutes of arc
         i += 1
 
@@ -810,10 +889,10 @@ def ld_planets(d):          # used in ld_tables.moontab, ld_charts.LDstrategy
         LDhours_per_planet[idx] = n
         mag_per_planet[idx] = Vmag
         if n > 0:
-            firstLD_per_planet[idx] = math.copysign(ld_first, ld_first_ra_diff)
-            lastLD_per_planet[idx] = math.copysign(ld_last, ld_last_ra_diff)
-            maxLD_per_planet[idx] = math.copysign(ld_max, ld_max_ra)
-            minLD_per_planet[idx] = math.copysign(ld_min, ld_min_ra)
+            firstLD_per_planet[idx] = copysign(ld_first, ld_first_ra_diff)
+            lastLD_per_planet[idx] = copysign(ld_last, ld_last_ra_diff)
+            maxLD_per_planet[idx] = copysign(ld_max, ld_max_ra)
+            minLD_per_planet[idx] = copysign(ld_min, ld_min_ra)
             #print("Moon {:2d}h RA: {}   {} RA: {}".format(ld_max_i, ra_moon_max, name, ra_planet_max))
         else:       # if no valid LD data
             firstLD_per_planet[idx] = 1000.0    # invalid value
@@ -1036,10 +1115,10 @@ def ld_stars(d, NewMoonHours, ra_sun):      # used in moontab, LDstrategy
         LDhours_per_star[ns_idx] = n
         mag_per_star[ns_idx] = Hpmag
         if n > 0:
-            firstLD_per_star[ns_idx] = math.copysign(ld_first, ld_first_ra_diff)
-            lastLD_per_star[ns_idx] = math.copysign(ld_last, ld_last_ra_diff)
-            maxLD_per_star[ns_idx] = math.copysign(ld_max, ld_max_ra)
-            minLD_per_star[ns_idx] = math.copysign(ld_min, ld_min_ra)
+            firstLD_per_star[ns_idx] = copysign(ld_first, ld_first_ra_diff)
+            lastLD_per_star[ns_idx] = copysign(ld_last, ld_last_ra_diff)
+            maxLD_per_star[ns_idx] = copysign(ld_max, ld_max_ra)
+            minLD_per_star[ns_idx] = copysign(ld_min, ld_min_ra)
             #print("Moon {:2d}h RA: {}   {} RA: {}".format(ld_max_i, ra_moon_max, name, ra_star_max))
         else:       # if no valid LD data
             firstLD_per_star[ns_idx] = 1000.0   # invalid value

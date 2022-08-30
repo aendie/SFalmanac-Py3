@@ -19,14 +19,19 @@
 # This contains the majority of functions that calculate values for the Nautical Almanac
 
 ###### Standard library imports ######
-import datetime
-import time         # 00000 - stopwatch elements
-import math
+# don't confuse the 'date' method with the 'Date' variable!
+#   the following line includes 'datetime.combine' class method:
+from datetime import date, time, datetime, timedelta
+# don't confuse the 'time' instance method in the 'datetime' object with the 'Time' module:
+import time as Time # 00000 - stopwatch elements
+from math import pi, cos, tan, atan, degrees, copysign
 import os
 import errno
 import socket
 import sys			# required for .stdout.write()
+import urllib.error # used in 'download_EOP' function
 from urllib.request import urlopen
+from collections import deque
 
 ###### Third party imports ######
 from skyfield import VERSION
@@ -44,6 +49,10 @@ import config
 #---------------------------
 #   Module initialization
 #---------------------------
+
+urlIERS = "ftp://ftp.iers.org/products/eop/rapid/standard/"
+urlUSNO = "https://maia.usno.navy.mil/ser7/"        # alternate location
+urlDCIERS = "https://datacenter.iers.org/data/9/"   # alternate location
 
 hour_of_day = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
 next_hour_of_day = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
@@ -83,8 +92,8 @@ def isConnected():
 #       however, although the USNO server currently works, it was previously down for 2.5 years!
 #       So it is still best to try using the IERS server as first oprion, and USNO as second.
 
-def testIERSserver(filename):
-    url = "ftp://ftp.iers.org/products/eop/rapid/standard/" + filename
+def testServer(filename, url):
+    url += filename
     try:
         connection2 = urlopen(url)
     except Exception as e:
@@ -94,14 +103,19 @@ def testIERSserver(filename):
         return False
     return True     # server works
 
-def downloadUSNO(path, filename):
+def download_EOP(path, filename, url, loc):
     # NOTE: the following 'print' statement does not print immediately in Linux!
     #print("Downloading EOP data from USNO...", end ="")
-    sys.stdout.write("Downloading EOP data from USNO...")
+    sys.stdout.write("Downloading EOP data from {}...".format(loc))
     sys.stdout.flush()
     filepath = os.path.join(path, filename)
-    url = "https://maia.usno.navy.mil/ser7/" + filename
-    connection = urlopen(url)
+    url += filename
+    try:
+        connection = urlopen(url)
+    except urllib.error.URLError as e:
+        #raise IOError('error getting {0} - {1}'.format(url, e))
+        print('\nError getting {0} - {1}'.format(url, e))
+        sys.exit(0)
     blocksize = 128*1024
 
     # Claim our own unique download filename.
@@ -144,7 +158,6 @@ def downloadUSNO(path, filename):
     except Exception as e:
         raise IOError('error renaming {0} to {1} - {2}'.format(tempname, filepath, e))
 
-    #print("done.")
     sys.stdout.write("done.\n")
     sys.stdout.flush()
 
@@ -153,21 +166,33 @@ def init_sf(spad):
     load = Loader(spad)         # spad = folder to store the downloaded files
     EOPdf  = "finals2000A.all"  # Earth Orientation Parameters data file
     dfIERS = spad + EOPdf
+    config.useIERSEOP = False
+    config.txtIERSEOP = ""
 
     if config.useIERS:
         if compareVersion(VERSION, "1.31") >= 0:
             if os.path.isfile(dfIERS):
                 if load.days_old(EOPdf) > float(config.ageIERS):
                     if isConnected():
-                        if testIERSserver(EOPdf): load.download(EOPdf)
-                        else: downloadUSNO(spad,EOPdf)
+                        if testServer(EOPdf, urlIERS):  # first try downloading via FTP
+                            load.download(EOPdf)
+                        elif testServer(EOPdf, urlUSNO):# then try the USNO server
+                            download_EOP(spad,EOPdf,urlUSNO,"USNO")
+                        else:   # finally try the IERS datacenter (available in more countries)
+                            download_EOP(spad,EOPdf,urlDCIERS,"IERS datacenter")
                     else: print("NOTE: no Internet connection... using existing '{}'".format(EOPdf))
                 ts = load.timescale(builtin=False)	# timescale object
+                config.useIERSEOP = True
             else:
                 if isConnected():
-                    if testIERSserver(EOPdf): load.download(EOPdf)
-                    else: downloadUSNO(spad,EOPdf)
+                    if testServer(EOPdf, urlIERS):  # first try downloading via FTP
+                        load.download(EOPdf)
+                    elif testServer(EOPdf, urlUSNO):# then try the USNO server
+                        download_EOP(spad,EOPdf,urlUSNO,"USNO")
+                    else:   # finally try the IERS datacenter (available in more countries)
+                        download_EOP(spad,EOPdf,urlDCIERS,"IERS datacenter")
                     ts = load.timescale(builtin=False)	# timescale object
+                    config.useIERSEOP = True
                 else:
                     print("NOTE: no Internet connection... using built-in UT1-tables")
                     ts = load.timescale()	# timescale object with built-in UT1-tables
@@ -175,6 +200,64 @@ def init_sf(spad):
             ts = load.timescale()	# timescale object with built-in UT1-tables
     else:
         ts = load.timescale()	# timescale object with built-in UT1-tables
+
+    if config.useIERSEOP and os.path.isfile(dfIERS):
+# get the IERS EOP data "release date" according to these rules:
+#   - begin searching within this millenium (ignoring data from 02 Jan 1973 to 31 Dec 1999)
+#   - halt when the following value is "P", i.e. predicted as opposed to measured:
+#       - flag for Bull. A UT1-UTC values
+#   - step back one day to the record that has "I", i.e. measured data.
+#
+# the date of this record is the last date with IERS measured data.
+#   [the more recent the date, the more accurate/reliable are both the past IERS
+#   Earth Orientation Parameters as well as the future (predicted) EOP data values.]
+
+# IERS EOP data format definition:
+# https://maia.usno.navy.mil/ser7/readme.finals2000A
+
+        queue = deque(["a", "b", "c", "d"])
+        PredData = False    # True when Prediction data flagged
+        PredEnd  = False    # True when Prediction data no longer flagged
+
+        with open(dfIERS) as file:
+            for line in file:
+                mjd = int(line[7:12])
+
+                if not PredData and mjd >= 51544:    # skip data in previous  millenium
+                    queue.append(line)
+                    queue.popleft()
+                    c1 = line[16:17]    # IERS (I) or Prediction (P) flag for Bull. A polar motion values
+                    c2 = line[57:58]    # IERS (I) or Prediction (P) flag for Bull. A UT1-UTC values
+                    c3 = line[95:96]    # IERS (I) or Prediction (P) flag for Bull. A nutation values
+                    if not PredData and c2 == "P":
+                        PredData = True
+                        iers = ""
+                        while queue:
+                            iersdata = queue.pop()
+                            if iersdata[57:58] == "I":
+                                iers = iersdata
+                                break
+                        if iers == "": iers = iersdata
+                        year = int(iers[0:2]) + 2000
+                        mth  = int(iers[2:4])
+                        day  = int(iers[4:6])
+                        dt = date(year, mth, day)
+                        config.txtIERSEOP = "IERS Earth Orientation data as of " + dt.strftime("%d-%b-%Y")
+                elif PredData:    # search for end of Prediction data
+                    c2 = line[57:58]    # IERS (I) or Prediction (P) flag for Bull. A UT1-UTC values
+                    if c2 == "P":
+                        iers = line
+                    else:
+                        PredEnd = True
+                        break
+
+        # detect end of Prediction data even if file ends with c2 == "P" ...
+        year = int(iers[0:2]) + 2000
+        mth  = int(iers[2:4])
+        day  = int(iers[4:6])
+        dt2 = date(year, mth, day)
+        config.endIERSEOP = "IERS Earth Orientation predictions end " + dt2.strftime("%d-%b-%Y")
+        config.dt_IERSEOP = dt2
 
     if config.ephndx in set([0, 1, 2, 3, 4]):
     
@@ -347,7 +430,7 @@ def rise_set_error(y, lats, t0):
         msg = msg + " {}".format(y[2])
     if len(y) > 3:
         msg = msg + " {}".format(y[3])
-    dt = t0.utc_datetime() + datetime.timedelta(seconds = t0.dut1)
+    dt = t0.utc_datetime() + timedelta(seconds = t0.dut1)
 
     if config.logfileopen:
         # write to log file
@@ -399,8 +482,8 @@ def sunSD(d):               # used in sunmoontab(m)
     position = earth.at(t00).observe(sun)
     distance = position.apparent().radec(epoch='date')[2]
     dist_km = distance.km
-# OLD:  sds = math.degrees(math.atan(695500.0 / dist_km))   # radius of sun = 695500 km
-    sds = math.degrees(math.atan(695700.0 / dist_km))   # volumetric mean radius of sun = 695700 km
+# OLD:  sds = degrees(atan(695500.0 / dist_km))   # radius of sun = 695500 km
+    sds = degrees(atan(695700.0 / dist_km))   # volumetric mean radius of sun = 695700 km
     sdsm = "{:0.1f}".format(sds * 60)   # convert to minutes of arc
 
     t0 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
@@ -420,8 +503,8 @@ def moonSD(d):              # used in sunmoontab(m)
     position = earth.at(t00).observe(moon)
     distance = position.apparent().radec(epoch='date')[2]
     dist_km = distance.km
-# OLD: sdm = math.degrees(math.atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
-    sdm = math.degrees(math.atan(1737.4/dist_km))   # volumetric mean radius of moon = 1737.4 km
+# OLD: sdm = degrees(atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+    sdm = degrees(atan(1737.4/dist_km))   # volumetric mean radius of moon = 1737.4 km
     sdmm = "{:0.1f}".format(sdm * 60)  # convert to minutes of arc
     return sdmm
 
@@ -465,8 +548,8 @@ def moonGHA(d, round2seconds = False):  # used in sunmoontab(m) & equationtab (i
         decm[i] = fmtdeg(dec.degrees[i],2)
         degm[i] = dec.degrees[i]
         dist_km = distance.km[i]
-# OLD:  HP = math.degrees(math.atan(6378.0/dist_km))	# radius of earth = 6378.0 km
-        HP = math.degrees(math.atan(6371.0/dist_km))	# volumetric mean radius of earth = 6371.0 km
+# OLD:  HP = degrees(atan(6378.0/dist_km))	# radius of earth = 6378.0 km
+        HP = degrees(atan(6371.0/dist_km))	# volumetric mean radius of earth = 6371.0 km
         HPm[i] = "{:0.1f}'".format(HP * 60)     # convert to minutes of arc
 
     # degm has been added for the sunmoontab function
@@ -690,12 +773,12 @@ def ariestransit(d):        # used in planetstab(m)
         hr += 1
         if hr == 24:
             hr = 0
-    time = '{:02d}:{:02d}'.format(hr,min)
-    return time
+    ttime = '{:02d}:{:02d}'.format(hr,min)
+    return ttime
     
 def planetstransit(d, round2seconds = False):      # used in starstab & meridiantab (in eventtables.py)
     # returns SHA and Meridian Passage for the navigational planets
-    d1 = d + datetime.timedelta(days=1)
+    d1 = d + timedelta(days=1)
     
 # Venus
     t0 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
@@ -703,7 +786,7 @@ def planetstransit(d, round2seconds = False):      # used in starstab & meridian
     ra0 = position0.apparent().radec(epoch='date')[0]	# RA
     vau = position0.apparent().radec(epoch='date')[2]	# distance
     vsha = fmtgha(0, ra0.hours)
-    hpvenus = "{:0.1f}".format((math.tan(6371/(vau.au*149597870.7)))*60*180/math.pi)
+    hpvenus = "{:0.1f}".format((tan(6371/(vau.au*149597870.7)))*60*180/pi)
 
     # calculate planet transit
     tfr = t0
@@ -711,9 +794,9 @@ def planetstransit(d, round2seconds = False):      # used in starstab & meridian
     position = earth.at(tfr).observe(venus)
     ra = position.apparent().radec(epoch='date')[0]
     #print('Venus transit: ', tfr.gast, ra.hours)
-    start00 = time.time()                   # 00000
+    start00 = Time.time()                   # 00000
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(venus))
-    config.stopwatch += time.time()-start00 # 00000
+    config.stopwatch += Time.time()-start00 # 00000
     #if len(transit_time) != 1:
     #    print('returned %s values' %len(transit_time))
     vtrans = rise_set(transit_time,y,u'Venus   0{} E transit'.format(degree_sign),round2seconds)[0]
@@ -723,16 +806,16 @@ def planetstransit(d, round2seconds = False):      # used in starstab & meridian
     ra0 = position0.apparent().radec(epoch='date')[0]	# RA
     mau = position0.apparent().radec(epoch='date')[2]	# distance
     marssha = fmtgha(0, ra0.hours)
-    hpmars = "{:0.1f}".format((math.tan(6371/(mau.au*149597870.7)))*60*180/math.pi)
+    hpmars = "{:0.1f}".format((tan(6371/(mau.au*149597870.7)))*60*180/pi)
 
     # calculate planet transit
     tfr = t0
     tto = ts.ut1(d1.year, d1.month, d1.day, 0, 0, 0)
     position = earth.at(tfr).observe(mars)
     ra = position.apparent().radec(epoch='date')[0]
-    start00 = time.time()                   # 00000
+    start00 = Time.time()                   # 00000
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(mars))
-    config.stopwatch += time.time()-start00 # 00000
+    config.stopwatch += Time.time()-start00 # 00000
     marstrans = rise_set(transit_time,y,u'Mars    0{} E transit'.format(degree_sign),round2seconds)[0]
 
 # Jupiter
@@ -745,9 +828,9 @@ def planetstransit(d, round2seconds = False):      # used in starstab & meridian
     tto = ts.ut1(d1.year, d1.month, d1.day, 0, 0, 0)
     position = earth.at(tfr).observe(jupiter)
     ra = position.apparent().radec(epoch='date')[0]
-    start00 = time.time()                   # 00000
+    start00 = Time.time()                   # 00000
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(jupiter))
-    config.stopwatch += time.time()-start00 # 00000
+    config.stopwatch += Time.time()-start00 # 00000
     jtrans = rise_set(transit_time,y,u'Jupiter 0{} E transit'.format(degree_sign),round2seconds)[0]
     
 # Saturn
@@ -760,9 +843,9 @@ def planetstransit(d, round2seconds = False):      # used in starstab & meridian
     tto = ts.ut1(d1.year, d1.month, d1.day, 0, 0, 0)
     position = earth.at(tfr).observe(saturn)
     ra = position.apparent().radec(epoch='date')[0]
-    start00 = time.time()                   # 00000
+    start00 = Time.time()                   # 00000
     transit_time, y = almanac.find_discrete(tfr, tto, planet_transit(saturn))
-    config.stopwatch += time.time()-start00 # 00000
+    config.stopwatch += Time.time()-start00 # 00000
     sattrans = rise_set(transit_time,y,u'Saturn  0{} E transit'.format(degree_sign),round2seconds)[0]
     
     return [vsha,vtrans,marssha,marstrans,jsha,jtrans,satsha,sattrans,hpmars,hpvenus]
@@ -890,21 +973,21 @@ def twilight(d, lat, hemisph, round2seconds = False):  # used in twilighttab (se
     out = [0,0,0,0,0,0]
     lats = "{:3.1f} {}".format(abs(lat), hemisph)
     locn = Topos(lats, "0.0 E")
-    dt = datetime.datetime(d.year, d.month, d.day, 0, 0, 0)
+    dt = datetime(d.year, d.month, d.day, 0, 0, 0)
 
     if round2seconds:
-        dt -= datetime.timedelta(seconds=0.5)      # search from 0.5 seconds before midnight
+        dt -= timedelta(seconds=0.5)      # search from 0.5 seconds before midnight
     else:
-        dt -= datetime.timedelta(seconds=30)       # search from 30 seconds before midnight
+        dt -= timedelta(seconds=30)       # search from 30 seconds before midnight
 
     t0 = ts.ut1(dt.year, dt.month, dt.day,   dt.hour, dt.minute, dt.second)
     t1 = ts.ut1(dt.year, dt.month, dt.day+1, dt.hour, dt.minute, dt.second)
     abhd = False                                # above/below horizon display NOT enabled
 
     # Sunrise/Sunset...
-    start00 = time.time()                   # 00000
+    start00 = Time.time()                   # 00000
     actual, y = almanac.find_discrete(t0, t1, daylength(locn, 0.8333))
-    config.stopwatch += time.time()-start00 # 00000
+    config.stopwatch += Time.time()-start00 # 00000
     out[2], out[3], r2, s2, fs = rise_set(actual,y,lats,round2seconds)
     if out[2] == '--:--' and out[3] == '--:--':	# if neither sunrise nor sunset...
         abhd = True                             # enable above/below horizon display
@@ -913,9 +996,9 @@ def twilight(d, lat, hemisph, round2seconds = False):  # used in twilighttab (se
         out[3] = yn
 
     # Civil Twilight...
-    start00 = time.time()                   # 00000
+    start00 = Time.time()                   # 00000
     civil, y = almanac.find_discrete(t0, t1, daylength(locn, 6.0))
-    config.stopwatch += time.time()-start00 # 00000
+    config.stopwatch += Time.time()-start00 # 00000
     out[1], out[4], r2, s2, fs = rise_set(civil,y,lats,round2seconds)
     if abhd and out[1] == '--:--' and out[4] == '--:--':	# if neither begin nor end...
         yn = midnightsun(d, hemisph)
@@ -923,9 +1006,9 @@ def twilight(d, lat, hemisph, round2seconds = False):  # used in twilighttab (se
         out[4] = yn
 
     # Nautical Twilight...
-    start00 = time.time()                   # 00000
+    start00 = Time.time()                   # 00000
     naut, y = almanac.find_discrete(t0, t1, daylength(locn, 12.0))
-    config.stopwatch += time.time()-start00 # 00000
+    config.stopwatch += Time.time()-start00 # 00000
     out[0], out[5], r2, s2, fs = rise_set(naut,y,lats,round2seconds)
     if abhd and out[0] == '--:--' and out[5] == '--:--':	# if neither begin nor end...
         yn = midnightsun(d, hemisph)
@@ -999,8 +1082,8 @@ def getHorizon(t):
     position = earth.at(t).observe(moon)   # at noontime (for daily average distance)
     distance = position.apparent().radec(epoch='date')[2]
     dist_km = distance.km
-# OLD: sdm = math.degrees(math.atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
-    sdm = math.degrees(math.atan(1737.4/dist_km))   # volumetric mean radius of moon = 1737.4 km
+# OLD: sdm = degrees(atan(1738.1/dist_km))   # equatorial radius of moon = 1738.1 km
+    sdm = degrees(atan(1737.4/dist_km))   # volumetric mean radius of moon = 1737.4 km
     horizon = sdm + 0.5666667	# moon's equatorial radius + 34' (atmospheric refraction)
 
     return horizon
@@ -1045,9 +1128,9 @@ def fetchMoonData(d, tFrom, tNoon, tTo, i, lats, hFlag = False, round2seconds=Fa
 
         locn = Topos(lats, "0.0 E")
         horizon = getHorizon(tNoon)
-        start00 = time.time()                   # 00000
+        start00 = Time.time()                   # 00000
         moonrise, y = almanac.find_discrete(tFrom, tTo, moonday(locn, horizon))
-        time00 = time.time()-start00 # 00000
+        time00 = Time.time()-start00 # 00000
         rise, sett, ris2, set2, fs = rise_set(moonrise,y,lats,round2seconds)
 
         # only store single events (not double events, which are very rare)
@@ -1102,21 +1185,21 @@ def moonrise_set(d, lat, hemisph):  # used by tables.py in twilighttab (section 
     out2 = ['--:--','--:--','--:--','--:--','--:--','--:--']	# second event on same day (rare)
     lats = "{:3.1f} {}".format(abs(lat), hemisph)
     locn = Topos(lats, "0.0 E")
-    dt = datetime.datetime(d.year, d.month, d.day, 0, 0, 0)
-    dt -= datetime.timedelta(seconds=30)       # search from 30 seconds before midnight
+    dt = datetime(d.year, d.month, d.day, 0, 0, 0)
+    dt -= timedelta(seconds=30)       # search from 30 seconds before midnight
 
-    d9 = d + datetime.timedelta(days=-1)
+    d9 = d + timedelta(days=-1)
     t9 = ts.ut1(dt.year, dt.month, dt.day-1, dt.hour, dt.minute, dt.second)
 
     t0 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
 
-    d1 = d + datetime.timedelta(days=1)
+    d1 = d + timedelta(days=1)
     t1 = ts.ut1(dt.year, dt.month, dt.day+1, dt.hour, dt.minute, dt.second)
 
-    d2 = d + datetime.timedelta(days=2)
+    d2 = d + timedelta(days=2)
     t2 = ts.ut1(dt.year, dt.month, dt.day+2, dt.hour, dt.minute, dt.second)
 
-    d3 = d + datetime.timedelta(days=3)
+    d3 = d + timedelta(days=3)
     t3 = ts.ut1(dt.year, dt.month, dt.day+3, dt.hour, dt.minute, dt.second)
 
     t4 = ts.ut1(dt.year, dt.month, dt.day+4, dt.hour, dt.minute, dt.second)
@@ -1171,7 +1254,7 @@ def moonrise_set(d, lat, hemisph):  # used by tables.py in twilighttab (section 
     if out[1] == '--:--' and out[4] == '--:--':	# if neither moonrise nor moonset...
         config.moonDataSeeks -= 1
         if moonvisible[i] == None:
-            getmoonstate(dt+datetime.timedelta(days=1), lat, hemisph)    # ...get moon state if unknown
+            getmoonstate(dt+timedelta(days=1), lat, hemisph)    # ...get moon state if unknown
         out[1] = moonstate(i)
         out[4] = moonstate(i)
 
@@ -1197,7 +1280,7 @@ def moonrise_set(d, lat, hemisph):  # used by tables.py in twilighttab (section 
     if out[2] == '--:--' and out[5] == '--:--':	# if neither moonrise nor moonset...
         config.moonDataSeeks -= 1
         if moonvisible[i] == None:
-            getmoonstate(dt+datetime.timedelta(days=2), lat, hemisph)    # ...get moon state if unknown
+            getmoonstate(dt+timedelta(days=2), lat, hemisph)    # ...get moon state if unknown
         out[2] = moonstate(i)
         out[5] = moonstate(i)
 
@@ -1256,11 +1339,11 @@ def getmoonstate(dt, lat, hemisph):
     # search for the next moonrise or moonset (returned in moonrise[0] and y[0])
     while moonvisible[i] == None:
         t0 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
-        dt += datetime.timedelta(days=1)
+        dt += timedelta(days=1)
         t9 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
-        start00 = time.time()                   # 00000
+        start00 = Time.time()                   # 00000
         moonrise, y = almanac.find_discrete(t0, t9, moonday(locn, horizon))
-        config.stopwatch2 += time.time()-start00 # 00000
+        config.stopwatch2 += Time.time()-start00 # 00000
 #        for n in range(len(moonrise)):
 #            print(y[n], moonrise[n].utc_datetime())
         if len(moonrise) > 0:
@@ -1272,7 +1355,7 @@ def getmoonstate(dt, lat, hemisph):
 
     return
 
-def moonset_no_rise(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, round2seconds=False):
+def moonset_no_rise(Date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, round2seconds=False):
     # if moonset but no moonrise...
     msg = ""
     n = seek_moonrise(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, round2seconds)
@@ -1285,12 +1368,12 @@ def moonset_no_rise(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, 
         out = moonstate(0)       # moonrise "above horizon"
         msg = "above horizon (end)"
         #print(out[0])
-    #if msg != "": print("no moonrise on {} at lat {} => {}".format(date.strftime("%Y-%m-%d"), lat, msg))
+    #if msg != "": print("no moonrise on {} at lat {} => {}".format(Date.strftime("%Y-%m-%d"), lat, msg))
     if n == 0:
         out = r'''\raisebox{0.24ex}{\boldmath$\cdot\cdot$~\boldmath$\cdot\cdot$}'''
     return out
 
-def moonrise_no_set(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, round2seconds=False):
+def moonrise_no_set(Date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, round2seconds=False):
     # if moonrise but no moonset...
     msg = ""
     n = seek_moonset(prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, lats, round2seconds)
@@ -1301,7 +1384,7 @@ def moonrise_no_set(date, lat, prday, t9, t9noon, t0, nxday, t1, t1noon, t2, i, 
         moonvisible[0] = False
         out = moonstate(0)       # moonset "below horizon"
         msg = "below horizon (end)"
-    #if msg != "": print("no moonset on  {} at lat {} => {}".format(date.strftime("%Y-%m-%d"), lat, msg))
+    #if msg != "": print("no moonset on  {} at lat {} => {}".format(Date.strftime("%Y-%m-%d"), lat, msg))
     if n == 0:
         out = r'''\raisebox{0.24ex}{\boldmath$\cdot\cdot$~\boldmath$\cdot\cdot$}'''
     return out
@@ -1367,15 +1450,15 @@ def moonrise_set2(d, lat, hemisph):  # used in twilighttab of eventtables.py
 
     lats = "{:3.1f} {}".format(abs(lat), hemisph)
     locn = Topos(lats, "0.0 E")
-    dt = datetime.datetime(d.year, d.month, d.day, 0, 0, 0)
-    dt -= datetime.timedelta(seconds=0.5)   # search from 0.5 seconds before midnight
+    dt = datetime(d.year, d.month, d.day, 0, 0, 0)
+    dt -= timedelta(seconds=0.5)   # search from 0.5 seconds before midnight
 
-    d9 = d + datetime.timedelta(days=-1)
+    d9 = d + timedelta(days=-1)
     t9 = ts.ut1(dt.year, dt.month, dt.day-1, dt.hour, dt.minute, dt.second)
 
     t0 = ts.ut1(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
 
-    d1 = d + datetime.timedelta(days=1)
+    d1 = d + timedelta(days=1)
     t1 = ts.ut1(dt.year, dt.month, dt.day+1, dt.hour, dt.minute, dt.second)
 
     t2 = ts.ut1(dt.year, dt.month, dt.day+2, dt.hour, dt.minute, dt.second)
@@ -1684,9 +1767,9 @@ def moonphase(d):           # used in twilighttab (section 3)
     # returns the moon's elongation (angle to the sun)
 
     # convert python 'date' to 'date with time' ...
-    dt = datetime.datetime(d.year, d.month, d.day, 0, 0, 0)
+    dt = datetime(d.year, d.month, d.day, 0, 0, 0)
     # phase is calculated at noon
-    dt += datetime.timedelta(hours=12)
+    dt += timedelta(hours=12)
 
     t00 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
     #t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)
@@ -1702,9 +1785,9 @@ def moonphase(d):           # used in twilighttab (section 3)
     #nnm = NextNewMoon.replace(tzinfo=None)
 
     if WaxingMoon:
-        phase = math.pi - phase_angle.radians
+        phase = pi - phase_angle.radians
     else:
-        phase = math.pi + phase_angle.radians
+        phase = pi + phase_angle.radians
 
     return phase
 
@@ -1715,16 +1798,16 @@ def moonage(d, d1):         # used in twilighttab (section 3)
     t00 = ts.ut1(d.year, d.month, d.day, 0, 0, 0)
     #t12 = ts.ut1(d.year, d.month, d.day, 12, 0, 0)
     phase_angle = almanac.phase_angle(eph, 'moon', t00)     # OLD: t12
-    pctrad = 50 * (1.0 + math.cos(phase_angle.radians))
+    pctrad = 50 * (1.0 + cos(phase_angle.radians))
     pct = "{:.0f}".format(pctrad)
 
     # calculate age of moon
 
     pnm = PreviousNewMoon
     nnm = NextNewMoon
-    #dt0 = datetime.date(pnm.year, pnm.month, pnm.day)
-    #dt1 = datetime.date(nnm.year, nnm.month, nnm.day)
-    dt  = datetime.datetime.combine(d1, datetime.time(0, 0))
+    #dt0 = date(pnm.year, pnm.month, pnm.day)
+    #dt1 = date(nnm.year, nnm.month, nnm.day)
+    dt = datetime.combine(d1, time(0, 0))
     age1td = dt-pnm.replace(tzinfo=None)
     age2td = dt-nnm.replace(tzinfo=None)
     age1 = age1td.days
@@ -1784,16 +1867,16 @@ def equation_of_time(d, d1, UpperList, LowerList, extras, round2seconds = False)
 
     # percent illumination is calculated at midnight
     phase_angle = almanac.phase_angle(eph, 'moon', t00)     # OLD: t12
-    pctrad = 50 * (1.0 + math.cos(phase_angle.radians))
+    pctrad = 50 * (1.0 + cos(phase_angle.radians))
     pct = "{:.0f}".format(pctrad)
 
     # calculate age of moon
 
     pnm = PreviousNewMoon
     nnm = NextNewMoon
-    #dt0 = datetime.date(pnm.year, pnm.month, pnm.day)
-    #dt1 = datetime.date(nnm.year, nnm.month, nnm.day)
-    dt  = datetime.datetime.combine(d1, datetime.time(0, 0))
+    #dt0 = date(pnm.year, pnm.month, pnm.day)
+    #dt1 = date(nnm.year, nnm.month, nnm.day)
+    dt = datetime.combine(d1, time(0, 0))
     age1td = dt-pnm.replace(tzinfo=None)
     age2td = dt-nnm.replace(tzinfo=None)
     age1 = age1td.days
@@ -1882,12 +1965,12 @@ def find_new_moon(d):       # used in doublepage
     # note: the python datetimes above are timezone 'aware' (not 'naive')
 
     # search from 30 days earlier than noon... till noon on this day
-    d0 = d - datetime.timedelta(days=30)
+    d0 = d - timedelta(days=30)
     t0 = ts.utc(d0.year, d0.month, d0.day, 12, 0, 0)
     t1 = ts.utc(d.year, d.month, d.day, 12, 0, 0)
-    start00 = time.time()                   # 00000
+    start00 = Time.time()                   # 00000
     t, y = almanac.find_discrete(t0, t1, almanac.moon_phases(eph))
-    config.stopwatch += time.time()-start00 # 00000
+    config.stopwatch += Time.time()-start00 # 00000
     for i in range(len(t)):
         if y[i] == 0:       # 0=New Moon, 1=First Quarter, 2=Full Moon, 3=Last Quarter
             PreviousNewMoon = t[i].utc_datetime()
@@ -1898,11 +1981,11 @@ def find_new_moon(d):       # used in doublepage
 
     if PreviousNewMoon != None and PreviousFullMoon != None:
         # synodic month = about 29.53 days
-        t2 = ts.utc(PreviousNewMoon + datetime.timedelta(days=28))
-        t3 = ts.utc(PreviousNewMoon + datetime.timedelta(days=30))
-        start00 = time.time()                   # 00000
+        t2 = ts.utc(PreviousNewMoon + timedelta(days=28))
+        t3 = ts.utc(PreviousNewMoon + timedelta(days=30))
+        start00 = Time.time()                   # 00000
         t, y = almanac.find_discrete(t2, t3, almanac.moon_phases(eph))
-        config.stopwatch += time.time()-start00 # 00000
+        config.stopwatch += Time.time()-start00 # 00000
         for i in range(len(t)):
             if y[i] == 0:       # 0 = New Moon
                 NextNewMoon = t[i].utc_datetime()

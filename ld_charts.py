@@ -61,7 +61,7 @@ PREVobjColour = []      # list of LD object-colour tuples from previous day
 #   Module initialization
 #---------------------------
 
-def init_A4(spad, ts, d0=None):
+def init_A4(ts, d0=None):
     # initialize variables for this module
 
     global sf
@@ -2368,10 +2368,10 @@ ns_fs,-0.9*sf,2.67*sf)
 #--------------------------
 
 # global variables >>> d00, decmin, decmax, PREVobjColour, PREVobjects, shamin, shamax, sharng, t00
-def makeLDcharts(first_day, strat, daystoprocess, outfile, spad, ts, onlystars, quietmode):
+def makeLDcharts(first_day, strat, daystoprocess, outfile, ts, onlystars, quietmode):
 
     global d00, t00, shamin, shamax, sharng, decmin, decmax, PREVobjColour, PREVobjects
-    init_A4(spad, ts, first_day)    # initialize variables
+    init_A4(ts, first_day)    # initialize variables
 
     DEBUG_m2 = False            # 'True' to print each LD object
 

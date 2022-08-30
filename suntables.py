@@ -23,12 +23,13 @@
 # https://docs.python.org/3/whatsnew/3.0.html#pep-3101-a-new-approach-to-string-formatting
 
 ###### Standard library imports ######
-from datetime import datetime, timedelta
-from math import copysign as copysign
+# don't confuse the 'date' method with the 'Date' variable!
+from datetime import date, datetime, timedelta
+from math import copysign
 
 ###### Local application imports ######
 import config
-import alma_skyfield as alma_skyfield
+import alma_skyfield
 
 #------------------------
 #   internal functions
@@ -116,7 +117,7 @@ def fmtdates(d1,d2):
     return d1.strftime("%d.%m.%Y") + " - " + d2.strftime("%d.%m.%Y")
 
 # >>>>>>>>>>>>>>>>>>>>>>>>
-def suntab(date, n):
+def suntab(Date, n):
     # generates LaTeX table for sun only (traditional styla)
     tab = r'''\noindent
 \begin{tabular*}{0.2\textwidth}[t]{@{\extracolsep{\fill}}|c|rr|}
@@ -125,9 +126,9 @@ def suntab(date, n):
         tab = tab + r'''\hline
 \multicolumn{{1}}{{|c|}}{{\rule{{0pt}}{{2.6ex}}\textbf{{{}}}}} & \multicolumn{{1}}{{c}}{{\textbf{{GHA}}}} & \multicolumn{{1}}{{c|}}{{\textbf{{Dec}}}}\\
 \hline\rule{{0pt}}{{2.6ex}}\noindent
-'''.format(date.strftime("%d"))
+'''.format(Date.strftime("%d"))
 
-        ghas, decs, degs = alma_skyfield.sunGHA(date)
+        ghas, decs, degs = alma_skyfield.sunGHA(Date)
         h = 0
 
         if config.decf != '+':  # USNO format for Declination
@@ -165,7 +166,7 @@ def suntab(date, n):
                 tab = tab + line + lineterminator
                 h += 1
 
-        sds, dsm = alma_skyfield.sunSD(date)
+        sds, dsm = alma_skyfield.sunSD(Date)
         tab = tab + r'''\hline
 \rule{{0pt}}{{2.4ex}} & 
 \multicolumn{{1}}{{c}}{{SD={}$'$}} & 
@@ -176,13 +177,13 @@ def suntab(date, n):
             # add space between tables...
             tab = tab + r'''\multicolumn{1}{c}{}\\[-0.5ex]'''
         n -= 1
-        date += timedelta(days=1)
+        Date += timedelta(days=1)
 
     tab = tab + r'''\end{tabular*}'''
     return tab
 
 # >>>>>>>>>>>>>>>>>>>>>>>>
-def suntabm(date, n):
+def suntabm(Date, n):
     # generates LaTeX table for sun only (modern style)
     if config.decf != '+':	# USNO format for Declination
         colsep = "4pt"
@@ -199,9 +200,9 @@ def suntabm(date, n):
         tab = tab + r'''
 \multicolumn{{1}}{{c}}{{\footnotesize{{\textbf{{{}}}}}}} & \multicolumn{{1}}{{c}}{{\footnotesize{{\textbf{{GHA}}}}}} & \multicolumn{{1}}{{c}}{{\footnotesize{{\textbf{{Dec}}}}}}\\
 \cmidrule{{1-3}}
-'''.format(date.strftime("%d"))
+'''.format(Date.strftime("%d"))
 
-        ghas, decs, degs = alma_skyfield.sunGHA(date)
+        ghas, decs, degs = alma_skyfield.sunGHA(Date)
         h = 0
 
         if config.decf != '+':  # USNO format for Declination
@@ -249,7 +250,7 @@ def suntabm(date, n):
                 tab = tab + line + lineterminator
                 h += 1
 
-        sds, dsm = alma_skyfield.sunSD(date)
+        sds, dsm = alma_skyfield.sunSD(Date)
         tab = tab + r'''\cmidrule{{2-3}} & 
 \multicolumn{{1}}{{c}}{{\scriptsize{{SD\,=\,{}$'$}}}} & \multicolumn{{1}}{{c}}{{\footnotesize{{\textit{{d}}\,=\,{}$'$}}}}\\
 \cmidrule{{2-3}}'''.format(sds,dsm)
@@ -259,7 +260,7 @@ def suntabm(date, n):
             tab = tab + r'''
 \multicolumn{3}{c}{}\\[-1.5ex]'''
         n -= 1
-        date += timedelta(days=1)
+        Date += timedelta(days=1)
     tab = tab + r'''
 \end{tabular}'''
     return tab
@@ -268,37 +269,60 @@ def suntabm(date, n):
 #   page preparation
 #----------------------
 
-def page(date, dpp=15):
+def page(Date, dpp=15):
     # time delta values for the initial date&time...
-    dut1, deltat = alma_skyfield.getDUT1(date)
+    dut1, deltat = alma_skyfield.getDUT1(Date)
     timeDUT1 = r"DUT1 = UT1-UTC = {:+.4f} sec\quad$\Delta$T = TT-UT1 = {:+.4f} sec".format(dut1, deltat)
 
+    Lfoot_IERSEOP = ""
+    if config.dt_IERSEOP != None:
+        # the IERS EOP data start date is 2nd January 1973
+        if Date + timedelta(days=14) >= date(1973, 1, 2):
+            Lfoot_IERSEOP = config.txtIERSEOP
+        if Date + timedelta(days=14) >= config.dt_IERSEOP:
+            Lfoot_IERSEOP = config.endIERSEOP
+        if Date > config.dt_IERSEOP:
+            Lfoot_IERSEOP = r'''\textbf{No IERS EOP prediction data available}'''
+
     if dpp > 1:
-        str2 = r'''\textbf{{{} to {} UT}}'''.format(date.strftime("%Y %B %d"),(date+timedelta(days=dpp-1)).strftime("%b. %d"))
+        str2 = r'''\textbf{{{} to {} UT}}'''.format(Date.strftime("%Y %B %d"),(Date+timedelta(days=dpp-1)).strftime("%b. %d"))
     else:
-        str2 = r'''\textbf{{{} UT}}'''.format(date.strftime("%Y %B %d"))
+        str2 = r'''\textbf{{{} UT}}'''.format(Date.strftime("%Y %B %d"))
 
     # creates a page (15 days) of the Sun almanac
-    page = r'''
+    if config.FANCYhd:
+        page = r'''
 % ------------------ N E W   P A G E ------------------
 \newpage
 \sffamily
-\lhead{{\noindent\textsf{{\footnotesize{{{}}}}}}}
+\lhead{{\textsf{{\footnotesize{{{}}}}}}}
 \rhead{{\textsf{{\textbf{{{}}}}}}}
+\lfoot{{\textsf{{\footnotesize{{{}}}}}}}
+\begin{{scriptsize}}
+'''.format(timeDUT1, str2, Lfoot_IERSEOP)
+    else:   # old formatting
+        page = r'''
+% ------------------ N E W   P A G E ------------------
+\newpage
+\sffamily
+\noindent
+\begin{{flushleft}}     % required so that \par works
+{{\footnotesize {}}}\hfill{}
+\end{{flushleft}}\par
 \begin{{scriptsize}}
 '''.format(timeDUT1, str2)
 
     if config.tbls == "m":
         while dpp > 0:
-            page += suntabm(date,min(3,dpp))
-            date += timedelta(days=3)
+            page += suntabm(Date,min(3,dpp))
+            Date += timedelta(days=3)
             dpp -= 3
             if dpp > 0: page = page + r'''\quad
 '''
     else:
         while dpp > 0:
-            page += suntab(date,min(3,dpp))
-            date += timedelta(days=3)
+            page += suntab(Date,min(3,dpp))
+            Date += timedelta(days=3)
             dpp -= 3
 
     # to avoid "Overfull \hbox" messages, leave a paragraph end before the end of a size change. (This may only apply to tabular* table style) See lines below...
@@ -349,161 +373,9 @@ def pages(first_day, dtp):
 
     return out
 
-#--------------------------
-#   external entry point
-#--------------------------
-
-def sunalmanac(first_day, dtp):
-    # dtp = 0 if for entire year; = -1 if for entire month; else days to print
-
-    # make almanac starting from first_day
-    year = first_day.year
-    mth = first_day.month
-    day = first_day.day
-
-    # page size specific parameters
-    # NOTE: 'bm' (bottom margin) is an unrealistic value used only to determine the vertical size of 'body' (textheight), which must be large enough to include all the tables. 'tm' (top margin) and 'hs' (headsep) determine the top of body. Finally use 'fs' (footskip) to position the footer.
-    if config.pgsz == "A4":
-        # A4 ... pay attention to the limited page width
-        paper = "a4paper"
-        tm = "34.6mm"       # was "21mm" [v2q]
-        bm = "18mm"
-        hs = "2.3pt"        # headsep  (page 3 onwards) [v2q]
-        fs = "36pt"         # footskip (page 3 onwards) [v2q]
-        lm = "12mm"         # 13mm
-        rm = "12mm"         # 13mm
-        if config.tbls == "m":  # USNO format for Declination
-            tm = "21.6mm"   # was "8mm" [v2q]
-            bm = "9mm"      # was "13mm" [v2q]
-            hs = "3.4pt"    # headsep  (page 3 onwards) [v2q]
-            fs = "24pt"     # footskip (page 3 onwards) [v2q]
-            lm = "11mm"
-            rm = "10mm"
-            if config.decf == '+':	# Positive/Negative Declinations
-                lm = "12mm"     # 14mm
-                rm = "12mm"     # 14mm
-    else:
-        # LETTER ... pay attention to the limited page height
-        paper = "letterpaper"
-        tm = "25.7mm"       # was "12.2mm" [v2q]
-        bm = "9.5mm"        # was "13mm"
-        hs = "2.6pt"        # headsep  (page 3 onwards) [v2q]
-        fs = "28pt"         # footskip (page 3 onwards) [v2q]
-        lm = "15mm"         # 16mm
-        rm = "15mm"         # 16mm
-        if config.tbls == "m":	# USNO format for Declination
-            tm = "18mm"     # was "5mm" [v2q]
-            bm = "2mm"      # was "8mm" [v2q]
-            hs = "1.6pt"    # headsep    (page 3 onwards) [v2q]
-            fs = "21pt"     # footskip   (page 3 onwards) [v2q]
-            lm = "14mm"
-            rm = "13mm"
-            if config.decf == '+':	# Positive/Negative Declinations
-                lm = "15mm"
-                rm = "15mm"
-
-
-    # default is 'oneside'...
-    alm = r'''\documentclass[10pt, {}]{{report}}'''.format(paper)
-
-    alm = alm + r'''
-%\usepackage[utf8]{inputenc}
-\usepackage[english]{babel}
-\usepackage{fontenc}
-\usepackage{enumitem} % used to customize the {description} environment'''
-
-    if config.tbls == "m":
-        alm = alm + r'''
-\usepackage[table]{xcolor}
-\definecolor{LightCyan}{rgb}{0.88,1,1}
-\usepackage{booktabs}'''
-
-    # to troubleshoot add "showframe, verbose," below:
-    alm = alm + r'''
-\usepackage[nomarginpar, top={}, bottom={}, left={}, right={}]{{geometry}}
-\setlength{{\headsep}}{{{}}} % [v2q]'''.format(tm,bm,lm,rm,hs)
-
-    # Note: \DeclareUnicodeCharacter is not compatible with some versions of pdflatex
-    alm = alm + r'''
-\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
-\usepackage{fancyhdr}   % [v2q]
-\pagestyle{fancy}       % [v2q]
-\renewcommand{\headrulewidth}{0pt}  % [v2q]
-%\pdfvorigin=1in % [v2q]
-%\pdfhorigin=1in % [v2q]
-\setlength{\footskip}{15pt}
-\usepackage[pdftex]{graphicx}
-%\showboxbreadth=50  % use for logging
-%\showboxdepth=50    % use for logging
-%\DeclareUnicodeCharacter{00B0}{\ensuremath{{}^\circ}}
-\begin{document}
-% for the title page and page 2 only...
-\newgeometry{nomarginpar, top=5mm, bottom=13mm, left=20mm, right=14mm}'''
-
-    alm = alm + r'''
-    \begin{titlepage}\vspace*{1.5cm}
-    \begin{center}
-    \textsc{\Large Generated using Skyfield}\\
-    \large http://rhodesmill.org/skyfield/\\[1.5cm]'''
-
-    if config.dockerized:   # DOCKER ONLY
-        fn = "../Ra"
-    else:
-        fn = "./Ra"
-
-    alm = alm + r'''
-    \includegraphics[width=0.4\textwidth]{{{}}}\\[1cm]
-    \textsc{{\huge The Nautical Almanac for the Sun}}\\[0.7cm]'''.format(fn)
-
-    if dtp == 0:
-        alm = alm + r'''
-    \HRule \\[0.6cm]
-    {{ \Huge \bfseries {}}}\\[0.4cm]
-    \HRule \\[1.5cm]'''.format(year)
-    elif dtp == -1:
-        alm = alm + r'''
-    \HRule \\[0.6cm]
-    {{ \Huge \bfseries {}}}\\[0.4cm]
-    \HRule \\[1.5cm]'''.format(first_day.strftime("%B %Y"))
-    elif dtp > 1:
-        alm = alm + r'''
-    \HRule \\[0.6cm]
-    {{ \Huge \bfseries {}}}\\[0.4cm]
-    \HRule \\[1.5cm]'''.format(fmtdates(first_day,first_day+timedelta(days=dtp-1)))
-    else:
-        alm = alm + r'''
-    \HRule \\[0.6cm]
-    {{ \Huge \bfseries {}}}\\[0.4cm]
-    \HRule \\[1.5cm]'''.format(fmtdate(first_day))
-
-    alm = alm + r'''
-    \begin{center} \large
-    \emph{Author:}\\
-    Andrew \textsc{Bauer}\\[6Pt]
-    \emph{Original concept from:}\\
-    Enno \textsc{Rodegerdts}\\[6Pt]
-    \emph{Python Package Index:}\\
-    https://pypi.org/project/sfalmanac/
-    \end{center}'''
-
-    alm = alm + r'''
-    \vfill
-    {\large \today}
-    \HRule \\[0.6cm]
-    \end{center}
-    \begin{description}[leftmargin=5.5em,style=nextline]\footnotesize
-    \item[Disclaimer:] These are computer generated tables - use them at your own risk.
-    The accuracy has been randomly checked with JPL HORIZONS System, but cannot be guaranteed.
-    The author claims no liability for any consequences arising from use of these tables.
-    Besides, this publication only contains sun tables: an official version of the Nautical Almanac is indispensable.
-    \end{description}
-\end{titlepage}
-\lfoot{\textsf{\footnotesize{https://thenauticalalmanac.com/}}}
-\cfoot{\centerline{Page \thepage}}
-\rfoot{\textsf{\footnotesize{https://pypi.org/project/sfalmanac/}}}'''
-
-    alm = alm + r'''
-    \setcounter{page}{2}    % otherwise it's 1
+def page2():
+    return r'''
+    \thispagestyle{empty}
     \vspace*{2cm}
     \noindent
     DIP corrects for height of eye over the surface. This value has to be subtracted from the sextant altitude ($H_s$). The  correction in degrees for height of eye in meters is given by the following formula: 
@@ -531,14 +403,362 @@ def sunalmanac(first_day, dtp):
     \begin{itemize}
     \item if the $LHA$ is greater than $180^\circ$,\quad$Z_n=A$
     \item if the $LHA$ is less than $180^\circ$,\quad$Z_n = 360^\circ - A$
-    \end{itemize}
-\restoregeometry    % so it does not affect the rest of the pages'''
+    \end{itemize}'''
 
-    # footskip = distance of footer baseline below body [v2q]
-    alm = alm + r'''
-\setlength{{\footskip}}{{{}}}'''.format(fs)
+#--------------------------
+#   external entry point
+#--------------------------
 
-    alm = alm + pages(first_day,dtp)
-    alm = alm + '''
+def sunalmanac(first_day, dtp):
+    # dtp = 0 if for entire year; = -1 if for entire month; else days to print
+
+    if config.FANCYhd:
+        return makeSUNnew(first_day, dtp) # use the 'fancyhdr' package
+    else:
+        return makeSUNold(first_day, dtp) # use old formatting
+
+#   The following functions are intentionally separate functions.
+#   'makeEVold' is required for TeX Live 2019, which is the standard
+#   version in Ubuntu 20.04 LTS which expires in April 2030.
+
+def hdrSUNnew(first_day, dtp):
+    # build the front page
+
+    tex = r'''
+\pagestyle{frontpage}
+    \begin{titlepage}
+    \vspace*{1.5cm}
+    \begin{center}
+    \textsc{\Large Generated using Skyfield}\\
+    \large http://rhodesmill.org/skyfield/\\[1.5cm]'''
+
+    if config.dockerized:   # DOCKER ONLY
+        fn = "../Ra"
+    else:
+        fn = "./Ra"
+
+    tex += r'''
+    \includegraphics[width=0.4\textwidth]{{{}}}\\[1cm]
+    \textsc{{\huge The Nautical Almanac for the Sun}}\\[0.7cm]'''.format(fn)
+
+    if dtp == 0:
+        tex += r'''
+    \HRule \\[0.6cm]
+    {{ \Huge \bfseries {}}}\\[0.4cm]
+    \HRule \\[1.5cm]'''.format(first_day.year)
+    elif dtp == -1:
+        tex += r'''
+    \HRule \\[0.6cm]
+    {{ \Huge \bfseries {}}}\\[0.4cm]
+    \HRule \\[1.5cm]'''.format(first_day.strftime("%B %Y"))
+    elif dtp > 1:
+        tex += r'''
+    \HRule \\[0.6cm]
+    {{ \Huge \bfseries {}}}\\[0.4cm]
+    \HRule \\[1.5cm]'''.format(fmtdates(first_day,first_day+timedelta(days=dtp-1)))
+    else:
+        tex += r'''
+    \HRule \\[0.6cm]
+    {{ \Huge \bfseries {}}}\\[0.4cm]
+    \HRule \\[1.5cm]'''.format(fmtdate(first_day))
+
+    tex += r'''
+    \begin{center} \large
+    \emph{Author:}\\
+    Andrew \textsc{Bauer}\\[6Pt]
+    \emph{Original concept from:}\\
+    Enno \textsc{Rodegerdts}\\[6Pt]
+    \emph{Python Package Index:}\\
+    https://pypi.org/project/sfalmanac/
+    \end{center}'''
+
+    tex += r'''
+    \vfill
+    {\large \today}
+    \HRule \\[0.6cm]
+    \end{center}
+    \begin{description}[leftmargin=5.5em,style=nextline]\footnotesize
+    \item[Disclaimer:] These are computer generated tables - use them at your own risk.
+    The accuracy has been randomly checked with JPL HORIZONS System, but cannot be guaranteed.
+    The author claims no liability for any consequences arising from use of these tables.
+    Besides, this publication only contains sun tables: an official version of the Nautical Almanac is indispensable.
+    \end{description}
+\end{titlepage}
+\pagestyle{page2}'''
+
+    tex += page2()
+
+    return tex
+
+def makeSUNnew(first_day, dtp):
+    # make Sun almanac starting from first_day
+    year = first_day.year
+    mth = first_day.month
+    day = first_day.day
+
+    # page size specific parameters
+    # NOTE: 'bm' (bottom margin) is an unrealistic value used only to determine the vertical size of 'body' (textheight), which must be large enough to include all the tables. 'tm' (top margin) and 'hs' (headsep) determine the top of body. Finally use 'fs' (footskip) to position the footer.
+
+    if config.pgsz == "A4":
+        # A4 ... pay attention to the limited page width
+        paper = "a4paper"
+        # title & page 2...
+        tm1 = "5mm"
+        bm1 = "13mm"
+        lm1 = "20mm"
+        rm1 = "14mm"
+        # data pages...
+        tm = "26.6mm"       # was "21mm"
+        bm = "18mm"
+        hs = "2.3pt"        # headsep
+        fs = "18pt"         # footskip
+        lm = "12mm"         # 13mm
+        rm = "12mm"         # 13mm
+        if config.tbls == "m":  # USNO format for Declination
+            tm = "14mm"     # was "8mm"
+            bm = "13mm"     # was "13mm"
+            hs = "3.4pt"    # headsep
+            fs = "15pt"     # footskip
+            lm = "11mm"
+            rm = "10mm"
+            if config.decf == '+':	# Positive/Negative Declinations
+                lm = "12mm"     # 14mm
+                rm = "12mm"     # 14mm
+    else:
+        # LETTER ... pay attention to the limited page height
+        paper = "letterpaper"
+        # title & page 2...
+        tm1 = "5mm"
+        bm1 = "13mm"
+        lm1 = "20mm"
+        rm1 = "14mm"
+        # data pages...
+        tm = "17.8mm"       # was "12.2mm"
+        bm = "18mm"         # was "13mm"
+        hs = "2.6pt"        # headsep
+        fs = "28pt"         # footskip
+        lm = "15mm"         # 16mm
+        rm = "15mm"         # 16mm
+        if config.tbls == "m":	# USNO format for Declination
+            tm = "10.5mm"   # was "5mm"
+            bm = "8mm"      # was "8mm"
+            hs = "1.6pt"    # headsep
+            fs = "14pt"     # footskip
+            lm = "14mm"
+            rm = "13mm"
+            if config.decf == '+':	# Positive/Negative Declinations
+                lm = "15mm"
+                rm = "15mm"
+
+    # default is 'oneside'...
+    tex = r'''\documentclass[10pt, {}]{{report}}'''.format(paper)
+
+    # document preamble...
+    tex += r'''
+%\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{fontenc}
+\usepackage{enumitem} % used to customize the {description} environment'''
+
+    # to troubleshoot add "showframe, verbose," below:
+    tex += r'''
+\usepackage[nomarginpar, top={}, bottom={}, left={}, right={}]{{geometry}}'''.format(tm1,bm1,lm1,rm1)
+
+    # define page styles
+    tex += r'''
+%------------ page styles ------------
+\usepackage{fancyhdr}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{frontpage}{
+  \fancyhf{}% clear all header and footer fields
+}
+\fancypagestyle{page2}[frontpage]{
+  \fancyfootoffset[R]{0pt}% recalculate \headwidth
+  \cfoot{\centerline{Page \thepage}}
+  \setlength{\footskip}{6pt}
+}
+\fancypagestyle{datapage}[page2]{'''
+    tex += r'''
+  \newgeometry{{nomarginpar, top={}, bottom={}, left={}, right={}, headsep={}, footskip={}}}'''.format(tm,bm,lm,rm,hs,fs)
+    tex += r'''
+  \rfoot{\textsf{\footnotesize{https://pypi.org/project/sfalmanac/}}}
+} %-----------------------------------'''
+
+    if config.tbls == "m":
+        tex += r'''
+\usepackage[table]{xcolor}
+\definecolor{LightCyan}{rgb}{0.88,1,1}
+\usepackage{booktabs}'''
+
+    # Note: \DeclareUnicodeCharacter is not compatible with some versions of pdflatex
+    tex += r'''
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\usepackage[pdftex]{graphicx}
+%\showboxbreadth=50  % use for logging
+%\showboxdepth=50    % use for logging
+%\DeclareUnicodeCharacter{00B0}{\ensuremath{{}^\circ}}
+\begin{document}'''
+
+    if not config.DPonly:
+        tex += hdrSUNnew(first_day,dtp)
+
+    tex += r'''
+\pagestyle{datapage}  % the default page style for the document
+\setcounter{page}{1}    % otherwise it's 2'''
+
+    tex += pages(first_day,dtp)
+    tex += r'''
 \end{document}'''
-    return alm
+    return tex
+
+# ===   ===   ===   ===   ===   ===   ===   ===   ===   ===   ===   ===   ===
+# ===   ===   ===   ===   O L D   F O R M A T T I N G   ===   ===   ===   ===
+# ===   ===   ===   ===   ===   ===   ===   ===   ===   ===   ===   ===   ===
+
+def hdrSUNold(first_day, dtp):
+    # build the front page
+
+    tex = r'''
+% for the title page and page 2 only...
+\newgeometry{nomarginpar, top=5mm, bottom=13mm, left=20mm, right=14mm}
+\begin{titlepage}
+    \vspace*{1.5cm}
+    \begin{center}
+    \textsc{\Large Generated using Skyfield}\\
+    \large http://rhodesmill.org/skyfield/\\[1.5cm]'''
+
+    if config.dockerized:   # DOCKER ONLY
+        fn = "../Ra"
+    else:
+        fn = "./Ra"
+
+    tex += r'''
+    \includegraphics[width=0.4\textwidth]{{{}}}\\[1cm]
+    \textsc{{\huge The Nautical Almanac for the Sun}}\\[0.7cm]'''.format(fn)
+
+    if dtp == 0:
+        tex += r'''
+    \HRule \\[0.6cm]
+    {{ \Huge \bfseries {}}}\\[0.4cm]
+    \HRule \\[1.5cm]'''.format(first_day.year)
+    elif dtp == -1:
+        tex += r'''
+    \HRule \\[0.6cm]
+    {{ \Huge \bfseries {}}}\\[0.4cm]
+    \HRule \\[1.5cm]'''.format(first_day.strftime("%B %Y"))
+    elif dtp > 1:
+        tex += r'''
+    \HRule \\[0.6cm]
+    {{ \Huge \bfseries {}}}\\[0.4cm]
+    \HRule \\[1.5cm]'''.format(fmtdates(first_day,first_day+timedelta(days=dtp-1)))
+    else:
+        tex += r'''
+    \HRule \\[0.6cm]
+    {{ \Huge \bfseries {}}}\\[0.4cm]
+    \HRule \\[1.5cm]'''.format(fmtdate(first_day))
+
+    tex += r'''
+    \begin{center} \large
+    \emph{Author:}\\
+    Andrew \textsc{Bauer}\\[6Pt]
+    \emph{Original concept from:}\\
+    Enno \textsc{Rodegerdts}
+    \end{center}'''
+
+    tex += r'''
+    \vfill
+    {\large \today}
+    \HRule \\[0.6cm]
+    \end{center}
+    \begin{description}[leftmargin=5.5em,style=nextline]\footnotesize
+    \item[Disclaimer:] These are computer generated tables - use them at your own risk.
+    The accuracy has been randomly checked with JPL HORIZONS System, but cannot be guaranteed.
+    The author claims no liability for any consequences arising from use of these tables.
+    Besides, this publication only contains sun tables: an official version of the Nautical Almanac is indispensable.
+    \end{description}
+\end{titlepage}'''
+
+    tex += page2()
+
+    tex += r'''
+\restoregeometry    % so it does not affect the rest of the pages
+\setcounter{page}{1}    % otherwise it's 2'''
+
+    return tex
+
+def makeSUNold(first_day, dtp):
+    # make almanac starting from first_day
+    # page size specific parameters
+
+    if config.pgsz == "A4":
+        # pay attention to the limited page width
+        paper = "a4paper"
+        tm = "21mm"
+        bm = "18mm"
+        lm = "12mm"     # 13mm
+        rm = "12mm"     # 13mm
+        if config.tbls == "m" and config.decf != '+':	# USNO format for Declination
+            tm = "8mm"
+            bm = "13mm"
+            lm = "11mm"
+            rm = "10mm"
+        if config.tbls == "m" and config.decf == '+':	# Positive/Negative Declinations
+            tm = "8mm"
+            bm = "13mm"
+            lm = "12mm"
+            rm = "12mm"
+    else:
+        # pay attention to the limited page height
+        paper = "letterpaper"
+        tm = "12.2mm"
+        bm = "13mm"
+        lm = "15mm"     # 16mm
+        rm = "15mm"     # 16mm
+        if config.tbls == "m" and config.decf != '+':	# USNO format for Declination
+            tm = "5mm"
+            bm = "8mm"
+            lm = "14mm"
+            rm = "13mm"
+        if config.tbls == "m" and config.decf == '+':	# Positive/Negative Declinations
+            tm = "5mm"
+            bm = "8mm"
+            lm = "15mm"
+            rm = "15mm"
+
+    # default is 'oneside'...
+    tex = r'''\documentclass[10pt, {}]{{report}}'''.format(paper)
+
+    tex += r'''
+%\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{fontenc}
+\usepackage{enumitem} % used to customize the {description} environment'''
+
+    if config.tbls == "m":
+        tex += r'''
+\usepackage[table]{xcolor}
+\definecolor{LightCyan}{rgb}{0.88,1,1}
+\usepackage{booktabs}'''
+
+    # to troubleshoot add "showframe, verbose," below:
+    tex += r'''
+\usepackage[nomarginpar, top={}, bottom={}, left={}, right={}]{{geometry}}'''.format(tm,bm,lm,rm)
+
+    # Note: \DeclareUnicodeCharacter is not compatible with some versions of pdflatex
+    tex += r'''
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\setlength{\footskip}{15pt}
+\usepackage[pdftex]{graphicx}
+%\showboxbreadth=50  % use for logging
+%\showboxdepth=50    % use for logging
+%\DeclareUnicodeCharacter{00B0}{\ensuremath{{}^\circ}}
+\begin{document}'''
+
+    if not config.DPonly:
+        tex += hdrSUNold(first_day,dtp)
+
+    tex += pages(first_day,dtp)
+    tex += r'''
+\end{document}'''
+    return tex
