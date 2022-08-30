@@ -207,7 +207,7 @@ Previously execution could hang when aborting a multiprocessing task (in nautica
 
 ### INSTALLATION GUIDELINES on Windows 10:
 
-&emsp;Tested on Windows 10 Pro, Version 20H2 with an AMD Ryzen 7 3700X 8-Core Processor  
+&emsp;Tested on Windows 10 Pro, Version 21H2 with an AMD Ryzen 7 3700X 8-Core Processor  
 
 &emsp;Install Python 3.10.6 (should be in the system environment variable PATH, e.g. )  
 &emsp;&ensp;**C:\\Python310\Scripts;C:\\Python310;** .....  
