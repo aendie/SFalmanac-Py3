@@ -245,7 +245,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
             config.FANCYhd = True  # assume MiKTeX can handle the 'fancyhdr' package
 
     # command line arguments...
-    validargs = ['-v', '-q', '-log', '-tex', '-sky', '-old', 'a4', '-let', '-dpo', '-d1', '-d2', '-d3', '-d4']
+    validargs = ['-v', '-q', '-log', '-tex', '-sky', '-old', 'a4', '-let', '-dpo', '-nmg', '-d1', '-d2', '-d3', '-d4']
     # (the 4 dummy arguments d1 d2 d3 d4 are specified in 'dockerfile')
     for i in list(range(1, len(sys.argv))):
         if sys.argv[i] not in validargs:
@@ -269,6 +269,7 @@ if __name__ == '__main__':      # required for Windows multiprocessing compatibi
     keeptex = True if "-tex" in set(sys.argv[1:]) else False
     quietmode = True if "-q" in set(sys.argv[1:]) else False
     onlystars = True if "-sky" in set(sys.argv[1:]) else False
+    if "-nmg" in set(sys.argv[1:]): config.moonimg = False  # only for debugging
     config.DPonly = True if "-dpo" in set(sys.argv[1:]) else False
     if "-old" in set(sys.argv[1:]): config.FANCYhd = False  # don't use the 'fancyhdr' package
     forcepgsz = False
