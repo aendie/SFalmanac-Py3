@@ -8,12 +8,12 @@
 #   it under the terms of the GNU General Public License as published by
 #   the Free Software Foundation; either version 3 of the License, or
 #   (at your option) any later version.
-# 
+#
 #   This program is distributed in the hope that it will be useful,
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #   GNU General Public License for more details.
-# 
+#
 #   You should have received a copy of the GNU General Public License along
 #   with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -546,7 +546,8 @@ def starstab(Date, ts):
     # OLD: note: 0.251 instead of 0.25 (above) prevents an "Overfull \hbox (0.14297pt too wide)" message on about 5 specific pages in the full year (moonimg=True)
 
     if config.tbls == "m":
-        out = r'''\setlength{\tabcolsep}{4pt}  % default 6pt
+        out = r'''\renewcommand{\arraystretch}{1.1}
+\setlength{\tabcolsep}{4pt}  % default 6pt
 \begin{tabular}[t]{|rrr|}
 \multicolumn{3}{c}{\normalsize{Stars}}\\
 \hline
@@ -956,7 +957,8 @@ def twilighttab(Date, ts):
     if config.tbls == "m":
     # The header begins with a thin empty row as top padding; and the top row with
     # bold text has some padding below it. This result gives a balanced impression.
-        tab = r'''\setlength{\tabcolsep}{5pt}  % default 6pt
+        tab = r'''\renewcommand{\arraystretch}{1.05}
+\setlength{\tabcolsep}{5pt}  % default 6pt
 \begin{tabular}[t]{|r|ccc|ccc|}
 \multicolumn{7}{c}{\normalsize{}}\\
 \hline
@@ -998,9 +1000,9 @@ def twilighttab(Date, ts):
     j = 5
     for lat in config.lat:
         hemisph = 'N' if lat >= 0 else 'S'
-        hs = ""
+        hsph = ""
         if (lat in latNS):
-            hs = hemisph
+            hsph = hemisph
             if j%6 == 0:
                 tab = tab + r'''\rule{0pt}{2.6ex}
 '''
@@ -1012,7 +1014,7 @@ def twilighttab(Date, ts):
             # day+1 to calculate for the second day (three days are printed on one page)
             twi = twilight(Date+timedelta(days=1), lat, hemisph)
 
-        line = r'''\textbf{{{}}}'''.format(hs) + " " + r'''{}$^\circ$'''.format(abs(lat))
+        line = r'''\textbf{{{}}}'''.format(hsph) + " " + r'''{}$^\circ$'''.format(abs(lat))
         line = line + r''' & {} & {} & {} & {} & {} & {} \\
 '''.format(twi[0],twi[1],twi[2],twi[3],twi[4],twi[5])
         tab = tab + line
@@ -1053,9 +1055,9 @@ def twilighttab(Date, ts):
     j = 5
     for lat in config.lat:
         hemisph = 'N' if lat >= 0 else 'S'
-        hs = ""
+        hsph = ""
         if (lat in latNS):
-            hs = hemisph
+            hsph = hemisph
             if j%6 == 0:
                 tab = tab + r'''\rule{0pt}{2.6ex}
 '''
@@ -1068,12 +1070,12 @@ def twilighttab(Date, ts):
             moon, moon2 = moonrise_set(Date,lat,hemisph)
 
         if not(double_events_found(moon,moon2)):
-            tab = tab + r'''\textbf{{{}}}'''.format(hs) + " " + r'''{}$^\circ$'''.format(abs(lat))
+            tab = tab + r'''\textbf{{{}}}'''.format(hsph) + " " + r'''{}$^\circ$'''.format(abs(lat))
             tab = tab + r''' & {} & {} & {} & {} & {} & {} \\
 '''.format(moon[0],moon[1],moon[2],moon[3],moon[4],moon[5])
         else:
 # print a row with two moonrise/moonset events on the same day & latitude
-            tab = tab + r'''\multirow{{2}}{{*}}{{\textbf{{{}}} {}$^\circ$}}'''.format(hs,abs(lat))
+            tab = tab + r'''\multirow{{2}}{{*}}{{\textbf{{{}}} {}$^\circ$}}'''.format(hsph,abs(lat))
 # top row...
             for k in range(len(moon)):
                 if moon2[k] != '--:--':
@@ -1312,7 +1314,7 @@ def doublepage(Date, page1, ts):
 {{\footnotesize {}}}\hfill\textbf{{{} to {} UT}}
 \end{{flushleft}}\par
 \begin{{scriptsize}}
-'''.format(tm, bm, oddim, oddom, timeDUT1, Date.strftime("%Y %B %d"), (Date+timedelta(days=2)).strftime("%b. %d"), rightindent)
+'''.format(oddtm, bm, oddim, oddom, timeDUT1, Date.strftime("%Y %B %d"), (Date+timedelta(days=2)).strftime("%b. %d"), rightindent)
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     page += str1
@@ -1529,8 +1531,7 @@ def makeNAnew(first_day, dtp, ts):
     global oddtm,  oddbm,  oddim,  oddom,  oddhs,  oddfs  # required by doublepage
     global eventm, evenbm, evenim, evenom, evenhs, evenfs
 
-    # page size specific parameters
-    # NOTE: 'bm' (bottom margin) is an unrealistic value used only to determine the vertical size of 'body' (textheight), which must be large enough to include all the tables. 'tm' (top margin) and 'hds' (headsep) determine the top of body. Finally use 'fs' (footskip) to position the footer.
+    # NOTE: 'bm' (bottom margin) is an unrealistic value used only to determine the vertical size of 'body' (textheight), which must be large enough to include all the tables. 'tm' (top margin) and 'hds' (headsep) determine the top of body. Note: 'fs' (footskip) does not position the footer.
 
     # page size specific parameters
     if config.pgsz == "A4":
@@ -1604,10 +1605,10 @@ def makeNAnew(first_day, dtp, ts):
             evenfs = "12pt"     # footskip (page 2 onwards)
             evenim = "12.5mm"
             evenom = "12.5mm"
-            # odd data pages...
-            oddtm = "11mm"      # was "4mm"
+            # odd data pages... use 26.06.2024 as a testcase
+            oddtm = "8mm"       # was "4mm"
             oddbm = "8mm"       # was "8mm"
-            oddhs = "2.5pt"     # headsep  (page 3 onwards)
+            oddhs = "0pt"       # headsep  (page 3 onwards)
             oddfs = "12pt"      # footskip (page 3 onwards)
             oddim = "13mm"
             oddom = "13mm"
@@ -1766,11 +1767,11 @@ def hdrNAold(first_day, dtp, tm1, bm1, lm1, rm1, vsep1, vsep2):
 
 def makeNAold(first_day, dtp, ts):
     # make almanac starting from first_day
-    global tm, bm, oddim, oddom     # required by doublepage
+    global tm, bm, oddtm, oddim, oddom     # required by doublepage
 
     # page size specific parameters
     if config.pgsz == "A4":
-        # pay attention to the limited page width
+        # A4 ... pay attention to the limited page width
         paper = "a4paper"
         vsep1 = "1.5cm"
         vsep2 = "1.0cm"
@@ -1784,6 +1785,7 @@ def makeNAold(first_day, dtp, ts):
         im = "10mm"     # inner margin (right side on even pages)
         om = "9mm"      # outer margin (left side on even pages)
         # odd data pages...
+        oddtm = tm
         oddim = "14mm"  # inner margin (left side on odd pages)
         oddom = "11mm"  # outer margin (right side on odd pages)
         if config.tbls == "m":
@@ -1793,10 +1795,11 @@ def makeNAold(first_day, dtp, ts):
             im = "10mm"
             om = "10mm"
             # odd data pages...
+            oddtm = tm
             oddim = "14mm"
             oddom = "11mm"
     else:
-        # pay attention to the limited page height
+        # LETTER ... pay attention to the limited page height
         paper = "letterpaper"
         vsep1 = "0.8cm"
         vsep2 = "0.7cm"
@@ -1810,6 +1813,7 @@ def makeNAold(first_day, dtp, ts):
         im = "13mm"     # inner margin (right side on even pages)
         om = "13mm"     # outer margin (left side on even pages)
         # odd data pages...
+        oddtm = tm
         oddim = "14mm"  # inner margin (left side on odd pages)
         oddom = "11mm"  # outer margin (right side on odd pages)
         if config.tbls == "m":
@@ -1818,7 +1822,8 @@ def makeNAold(first_day, dtp, ts):
             bm = "8mm"
             im = "12mm"
             om = "12mm"
-            # odd data pages...
+            # odd data pages... use 26.06.2024 & 18.06.2025 as testcases
+            oddtm = "2.6mm"
             oddim = "14mm"
             oddom = "14mm"
 
