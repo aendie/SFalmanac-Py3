@@ -3,7 +3,7 @@
 SFalmanac-Py3 is a Python 3 script that creates the daily pages of the Nautical Almanac **using the UT timescale**, as do Official Nautical Almanacs (this is equivalent to UT1).
 These are tables that are needed for celestial navigation with a sextant. Although you are strongly advised to purchase the official Nautical Almanac, this program will reproduce the tables with no warranty or guarantee of accuracy.
 
-SFalmanac-Py3 was developed with the intention of having identical output format as Pyalmanac-Py3. As opposed to the older Ephem astronomy library, the intention was for it to be based entirely on the newer Skyfield astronomical library: https://rhodesmill.org/skyfield/, however Ephem is still required to calculate some planet magnitudes. SFalmanac uses the star database in Skyfield, which is based on data from the Hipparcos Catalogue.
+SFalmanac-Py3 was developed with the intention of having identical output format as Pyalmanac-Py3. Also it was to be based entirely on the newer Skyfield astronomical library: https://rhodesmill.org/skyfield/, however Ephem is still required to calculate some planet magnitudes. SFalmanac uses the star database in Skyfield, which is based on data from the Hipparcos Catalogue.
 
 SFalmanac-Py3 now employs the capability of multiprocessing (if your processor has multiple cores), making it acceptably fast. Single-processing is also available as an option. (The justification for Skyalmanac, a hybrid version that uses Ephem only for the slow calcalculations, is no longer valid now that multiprocessing is available.)
 
@@ -139,7 +139,7 @@ Lunar Distance tables have been added as a new option.
 
 Skyfield relies on the IERS, the International Earth Rotation Service, for accurate measurements of UT1 and for the schedule of leap seconds that keeps UTC from straying more than 0.9 seconds away from UT1.
 
-However the IERS server is currently undergoing maintenance and thus unavailable, which causes SFalmanac to fail. This version first tests is the IERS server is available and otherwise downloads the EOP (Earth Orientation Parameters) data from USNO (US Naval Observatory) instead.
+However the IERS server is currently undergoing maintenance and thus unavailable, which causes SFalmanac to fail. This version first tests if the IERS server is available and otherwise downloads the EOP (Earth Orientation Parameters) data from USNO (US Naval Observatory) instead.
 
 BUGFIX: Event Time tables no longer fail on 24.08.2063 (Lower Transit).
 
@@ -147,7 +147,7 @@ BUGFIX: Event Time tables no longer fail on 24.08.2063 (Lower Transit).
 
 Lunar Distance charts have been added as a new option to complement the Lunar Distance tables.
 
-SFalmanac in DockerHub has been updated to match this May 2022 issue:
+SFalmanac in DockerHub has been updated to match this May 2022 release:
 https://hub.docker.com/r/aendie/sfalmanac
 
 The PDF filenames have been revised (again), where 'A4' (or 'Letter') is the selected papersize:
