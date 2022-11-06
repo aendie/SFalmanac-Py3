@@ -189,6 +189,9 @@ Previously execution could hang when aborting a multiprocessing task (in nautica
 * UNIX filenames include parentheses unless option '-sbr' is specified
 * Date with ordinal number (e.g. 3rd Oct) added into Lunar Distance table
 
+BUGFIX (solved here and in PyPI sfalmanac 1.11.1):
+A Lunar Distance chart can now be created for 19 August 2038
+
 ## Requirements
 
 &emsp;Most of the computation is done by the free Skyfield library.  
