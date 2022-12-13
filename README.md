@@ -206,8 +206,8 @@ Previously the Moon's hourly d-value was:
 
 second ENHANCEMENT/BUGFIX (solved here and in PyPI sfalmanac 1.11.4):
 New Command Line options:
-    * -nao ... HMNAO style hourly Moon d-values
-    * -dtr ... 'difference-then-round' style hourly Moon d-values
+* -nao ... HMNAO style hourly Moon d-values
+* -dtr ... 'difference-then-round' style hourly Moon d-values
 The desired default can also be specified using **d_valNA** in *config.py*, which takes precedance when neither of the above Command Line options are specified.
 
 Using  '-dtr', the Moon's hourly d-value is calculated "difference-then-round":
