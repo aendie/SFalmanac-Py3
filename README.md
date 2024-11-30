@@ -233,8 +233,8 @@ Some code improvements including code that depends on the Skyfield version insta
 * the latest 'find_risings' & 'find_settings' Skyfield routines (if Skyfield >= 1.48) except for moonrise/moonset.
 
 **UPDATE: Nov 2024**
-BUGFIX (solved here and in PyPI sfalmanac 1.12.4):
-(These are technical issues that emerge with newer versions of Python)
+BUGFIX (solved here and in PyPI sfalmanac 1.12.4):  
+(These are technical issues that emerge with newer versions of Python)  
 * A Python DeprecationWarning requires timezone-aware objects to represent datetimes in UTC
 * A Python SyntaxWarning is averted by use of a raw string in a string literal
 
