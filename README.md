@@ -233,7 +233,8 @@ Some code improvements including code that depends on the Skyfield version insta
 * the latest 'find_risings' & 'find_settings' Skyfield routines (if Skyfield >= 1.48) except for moonrise/moonset.
 
 **UPDATE: Nov 2024**
-BUGFIX (solved here and in PyPI sfalmanac 1.12.4):  
+
+BUGFIX (solved here and in PyPI sfalmanac 1.12.5):  
 (These are technical issues that emerge with newer versions of Python)  
 * A Python DeprecationWarning requires timezone-aware objects to represent datetimes in UTC
 * A Python SyntaxWarning is averted by use of a raw string in a string literal
@@ -244,8 +245,8 @@ BUGFIX (solved here and in PyPI sfalmanac 1.12.4):
 &emsp;Typesetting is done typically by MiKTeX or TeX Live.  
 &emsp;Here are the requirements/recommendations:
 
-* Python v3.4 or higher (v3.11.x is recommended)
-* Skyfield >= 1.31 (the latest is recommended; see the Skyfield Changelog)
+* Python v3.4 or higher (v3.12 minimum is recommended)
+* Skyfield >= 1.49 (the latest is recommended; see the Skyfield Changelog)
 * numpy < 2.0.0 (only for Skyfield < 1.48)
 * Pandas >= 1.0 (to decode the Hipparcos star catalog)
 * Pandas >= 2.2.2 (if numpy version >= 2.0.0; otherwise numpy 1.26.4 is required)
@@ -319,7 +320,15 @@ BUGFIX (solved here and in PyPI sfalmanac 1.12.4):
 &emsp;**python3 sfalmanac.py**  
 
 
-### INSTALLATION GUIDELINES on Mac OS:
+### INSTALLATION GUIDELINES on Ubuntu Desktop 24.04:
+
+&emsp;Ubuntu 24.04 comes with Python 3.12 preinstalled, which requires use of a virtual environment.  
+&emsp;Please download the file **How to install Skyalmanac on Linux.pdf** for instructions.  
+&emsp;Installation of the PyPI package is described, which is simpler - no other files from GitHub are required.
+&emsp;Please note that **Skyalmanac** is the official package - SFalmanac is identical and no longer required.
+
+
+### INSTALLATION GUIDELINES on Mac OS (old; unverified):
 
 &emsp;Every Mac comes with python preinstalled.  
 &emsp;(Please choose this version of SFalmanac if Python 3.* is installed.)  
