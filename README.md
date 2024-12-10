@@ -324,7 +324,7 @@ BUGFIX (solved here and in PyPI sfalmanac 1.12.5):
 
 &emsp;Ubuntu 24.04 comes with Python 3.12 preinstalled, which requires use of a virtual environment.  
 &emsp;Please download the file **How to install Skyalmanac on Linux.pdf** for instructions.  
-&emsp;Installation of the PyPI package is described, which is simpler - no other files from GitHub are required.
+&emsp;Installation of the PyPI package is described, which is simpler - no other files from GitHub are required.  
 &emsp;Please note that **Skyalmanac** is the official package - SFalmanac is identical and no longer required.
 
 
