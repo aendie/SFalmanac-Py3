@@ -1656,7 +1656,7 @@ def makeNAnew(first_day, dtp, ts):
 }
 \fancypagestyle{datapage}[page1]{'''
     tex += r'''
-  \fancyfoot[LE,RO]{\textsf{\footnotesize{https://pypi.org/project/skyalmanac/}}}
+  \fancyfoot[LE,RO]{\textsf{\footnotesize{https://pypi.org/project/sfalmanac/}}}
 } %-----------------------------------'''
 
     if config.tbls == "m":
