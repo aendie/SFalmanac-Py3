@@ -299,7 +299,6 @@ BUGFIX (solved here and in PyPI sfalmanac 1.13):
 &emsp;Put the required files for SFalmanac in a new folder, run Command Prompt in that folder and start with:  
 &emsp;**py -3 sfalmanac.py**
 
-
 ### INSTALLATION GUIDELINES on Ubuntu Desktop 19.10 or 20.04, 22.04, 24.04 or 26.04:
 
 &emsp;Ubuntu 18.04 and higher comes with Python 3 preinstalled,  
@@ -317,14 +316,12 @@ BUGFIX (solved here and in PyPI sfalmanac 1.13):
 &emsp;Put the SFalmanac files in a folder and start with:  
 &emsp;**python3 sfalmanac.py**  
 
-
 ### INSTALLATION GUIDELINES on Ubuntu Desktop 24.04:
 
 &emsp;Ubuntu 24.04 comes with Python 3.12 preinstalled, which requires use of a virtual environment.  
 &emsp;Please download the file **How to install Skyalmanac on Linux.pdf** for instructions.  
 &emsp;Installation of the PyPI package is described, which is simpler - no other files from GitHub are required.  
 &emsp;Please note that **Skyalmanac** is the official package - SFalmanac is identical and no longer required.
-
 
 ### INSTALLATION GUIDELINES on Mac OS (old; unverified):
 
